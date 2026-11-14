@@ -684,9 +684,32 @@ app.delete('/api/users/:id', auth, superOnly, wrap(async (req, res) => {
 app.get('/healthz', (req, res) => res.send('ok'));
 app.get('/vendor/jspdf.js', (req, res) => res.sendFile(path.join(__dirname, 'node_modules/jspdf/dist/jspdf.umd.min.js')));
 app.get('/vendor/jspdf-autotable.js', (req, res) => res.sendFile(path.join(__dirname, 'node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.min.js')));
-app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html', maxAge: PROD ? '1h' : 0 }));
+// The web page: public/index.html, or wherever index.html was uploaded.
+function findPage() {
+  const preferred = path.join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(preferred)) return preferred;
+  const walk = (dir, depth) => {
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return null; }
+    for (const e of entries) if (e.isFile() && e.name.toLowerCase() === 'index.html') return path.join(dir, e.name);
+    if (depth >= 3) return null;
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name === 'node_modules' || e.name.startsWith('.')) continue;
+      const hit = walk(path.join(dir, e.name), depth + 1); if (hit) return hit;
+    }
+    return null;
+  };
+  return walk(__dirname, 0);
+}
+const PAGE = findPage();
+if (PAGE) console.log('Web page:', path.relative(__dirname, PAGE));
+else console.error('index.html NOT FOUND – upload the public folder (with index.html) to GitHub.');
 app.use('/api', (req, res) => bad(res, 'Not found', 404));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*', (req, res) => {
+  if (!PAGE) return res.status(500).type('text').send('Aculife-IB Portal: the web page file (public/index.html) is missing. Upload the "public" folder to GitHub and deploy again.');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(PAGE);
+});
 app.use((err, req, res, next) => {
   if (err && err.type === 'entity.too.large') return bad(res, 'This note is too large – remove or crop some images.', 413);
   console.error(err);
