@@ -107,14 +107,14 @@ async function seed() {
   }
   const s = await q("SELECT key FROM settings WHERE key='regions'");
   if (!s.rows.length) {
-    const reg = require('./seed/regions.json');
+    const reg = findSeed('regions.json') || { regions: [], countries: {}, classes: {} };
     await q("INSERT INTO settings(key,value) VALUES('regions',$1)", [JSON.stringify(reg)]);
     console.log('Region master loaded:', reg.regions.length, 'regions,', Object.keys(reg.countries).length, 'countries.');
   }
   const p = await q('SELECT COUNT(*)::int AS n FROM priority');
   const flag = await q("SELECT key FROM settings WHERE key='priority_seeded'");
   if (p.rows[0].n === 0 && !flag.rows.length) {
-    const rows = require('./seed/priority.json');
+    const rows = findSeed('priority.json') || [];
     let i = 0;
     for (const r of rows) { i++; await q('INSERT INTO priority(region,data,sort) VALUES($1,$2,$3)', [r.region, JSON.stringify(r), i]); }
     await q("INSERT INTO settings(key,value) VALUES('priority_seeded','true')");
@@ -129,6 +129,28 @@ async function getSettings() {
   return typeof v === 'string' ? JSON.parse(v) : v;
 }
 const parse = v => (typeof v === 'string' ? JSON.parse(v) : v);
+
+// Find a seed file wherever it was uploaded (seed/, Seed/, top level, or one folder deeper).
+const fs = require('fs');
+function findSeed(name) {
+  const tried = [];
+  const walk = (dir, depth) => {
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return null; }
+    for (const e of entries) if (e.isFile() && e.name.toLowerCase() === name.toLowerCase()) return path.join(dir, e.name);
+    if (depth >= 3) return null;
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name === 'node_modules' || e.name.startsWith('.')) continue;
+      const hit = walk(path.join(dir, e.name), depth + 1); if (hit) return hit;
+    }
+    return null;
+  };
+  const found = walk(__dirname, 0);
+  if (!found) { console.error(`Seed file ${name} not found anywhere in ${__dirname}. Upload the seed folder to GitHub.`); return null; }
+  console.log(`Using ${path.relative(__dirname, found)}`);
+  tried.push(found);
+  return JSON.parse(fs.readFileSync(found, 'utf8'));
+}
 
 /* ------------------------------------------------------------------ */
 /* App & security                                                      */
