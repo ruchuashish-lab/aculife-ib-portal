@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aculife-IB Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0b2a4a; --navy2:#123a63; --teal:#0f8b8d; --teal-l:#e6f4f4;
+  --bg:#f4f6f9; --card:#fff; --line:#dfe4ea; --ink:#1b2430; --muted:#5f6b7a;
+  --vh:#c0392b; --h:#d68910; --m:#2e86c1; --ok:#1e8449; --warn:#b9770e; --bad:#a93226;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--teal)}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+aside{background:var(--navy);color:#cfe0f1;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand .mark{display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#17a7a9,#0f6f8d);display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px}
+.brand b{color:#fff;font-size:16px;display:block;letter-spacing:.2px}
+.brand small{font-size:11px;color:#8fb0cf}
+nav{padding:10px 8px;flex:1}
+nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:#cfe0f1;text-decoration:none;margin-bottom:2px;font-weight:500}
+nav a:hover{background:rgba(255,255,255,.06)}
+nav a.on{background:var(--teal);color:#fff}
+nav a .ic{width:18px;text-align:center;opacity:.9}
+nav .sep{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#7393b3;padding:14px 12px 6px}
+.who{padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);font-size:12px}
+.who b{color:#fff;display:block;font-size:13px}
+main{min-width:0}
+.top{display:flex;align-items:center;gap:12px;padding:14px 26px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.top h1{font-size:18px;margin:0;flex:1}
+.content{padding:22px 26px 60px;max-width:1400px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;font-size:12px;font-weight:600;background:#eef2f6;color:var(--navy2);white-space:nowrap}
+.chip.teal{background:var(--teal-l);color:#0b6466}
+.pr{font-weight:700;font-size:11.5px;padding:2px 8px;border-radius:5px;color:#fff}
+.pr.VH{background:var(--vh)}.pr.H{background:var(--h)}.pr.M{background:var(--m)}
+.st{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.st.Draft{background:#eef0f3;color:#555}
+.st.Submitted{background:#e8f1fb;color:#1f5f99}
+.st.L1,.st.L2{background:#fff4e0;color:#8a5a00}
+.st.Approved{background:#e8f6ee;color:#2f7d4f}
+.st.Final{background:#1e8449;color:#fff}
+.st.Rejected{background:#fbe9e7;color:var(--bad)}
+.st.Returned{background:#fdeee0;color:#9c4f00}
+.btn{border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:#b9c3cf}
+.btn.p{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.p:hover{background:#0c7476}
+.btn.n{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.d{color:var(--bad);border-color:#efc4be}
+.btn.sm{padding:5px 10px;font-size:12.5px;white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.kpi .n{font-size:28px;font-weight:700;color:var(--navy)}
+.kpi .l{color:var(--muted);font-size:12.5px;margin-top:2px}
+.mod{cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:8px}
+.mod:hover{border-color:var(--teal);box-shadow:0 4px 14px rgba(15,139,141,.12)}
+.mod .ic{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font-size:20px;background:var(--teal-l)}
+.mod h3{margin:4px 0 0;font-size:15px}
+.mod p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+.muted{color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.bar input,.bar select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.bar input[type=search]{min-width:240px}
+table{width:100%;border-collapse:collapse}
+.tbl{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:auto}
+.tbl table th{background:#f0f3f7;text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0}
+.tbl table td{padding:10px 12px;border-bottom:1px solid #eef1f4;vertical-align:top}
+.tbl tr.click{cursor:pointer}.tbl tr.click:hover td{background:#f8fafb}
+.ptbl td.pc{background:#fbfcfd;border-right:1px solid #eef1f4;vertical-align:top}
+.ptbl tr.task td{border-bottom:1px solid #eef1f4}
+.ptbl tr.done td:not(.pc){opacity:.55}
+td.od{color:var(--bad);font-weight:600}
+.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;line-height:1.45;max-width:420px}
+.small{font-size:12px}
+h2{font-size:15px;margin:0 0 12px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:600;color:#3d4957}
+label.f input,label.f select,label.f textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-weight:400;background:#fff;color:var(--ink)}
+label.f textarea{min-height:90px;resize:vertical;line-height:1.5}
+.rte-bar{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:#f6f8fa}
+.rte-bar button{border:1px solid transparent;background:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12.5px}
+.rte-bar button:hover{background:#fff;border-color:var(--line)}
+.rte{min-height:150px;max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:0 0 8px 8px;padding:12px 14px;line-height:1.55;background:#fff;outline:none}
+.rte:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,139,141,.12)}
+.rte:empty:before{content:attr(data-ph);color:#9aa5b1}
+.rte table,.rich table{border-collapse:collapse;margin:8px 0;font-size:12.5px;width:auto;max-width:100%}
+.rte td,.rte th,.rich td,.rich th{border:1px solid #9aa6b2;padding:4px 7px;min-width:40px;vertical-align:top}
+.rte th,.rich th{background:#eef2f6}
+.rte img,.rich img{max-width:100%;height:auto;display:block;margin:6px 0;border:1px solid #eef1f4}
+.rich{line-height:1.6;overflow:auto}
+.rich p{margin:0 0 6px}
+.fg{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
+.fg .w2{grid-column:span 2}.fg .w4{grid-column:1/-1}
+.sec{margin-top:18px}
+.sec h4{margin:0 0 6px;font-size:13px;color:var(--navy2);text-transform:uppercase;letter-spacing:.04em}
+.goods input{width:100%;padding:6px 7px;border:1px solid var(--line);border-radius:6px;min-width:70px}
+.goods td{padding:5px 6px!important}
+.empty{text-align:center;padding:40px;color:var(--muted)}
+.modal-bg{position:fixed;inset:0;background:rgba(11,42,74,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow:auto}
+.modal{background:#fff;border-radius:12px;width:min(820px,100%);padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal.wide{width:min(1180px,100%)}
+.modal h3{margin:0 0 16px;font-size:17px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;z-index:99;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.toast.err{background:var(--bad)}
+.banner{padding:10px 14px;border-radius:8px;background:#fff8e6;border:1px solid #f3dc9d;color:#7a5a00;margin-bottom:14px;font-size:13px}
+/* Approval note document view */
+.doc{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:34px 40px;max-width:1000px;line-height:1.6}
+.doc .t{text-align:center;font-weight:700;text-decoration:underline;font-size:18px;margin-bottom:16px}
+.doc table.hd td{border:1px solid #9aa6b2;padding:7px 10px;font-size:13px}
+.doc table.hd td.k{font-weight:700;background:#f4f6f9;width:140px}
+.doc h5{font-size:14px;margin:18px 0 4px}
+.doc .body{white-space:pre-line}
+.doc table.gd{margin-top:8px;font-size:12px}
+.doc table.gd th,.doc table.gd td{border:1px solid #9aa6b2;padding:5px 6px}
+.doc table.gd th{background:#eef2f6}
+.sig{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}
+.sig div{border-top:1px solid #9aa6b2;padding-top:8px;font-size:13px}
+.trail{margin-top:16px}
+.trail li{margin-bottom:6px}
+.access-row{display:grid;grid-template-columns:1.2fr 150px 2fr 2fr auto;gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid #eef1f4}
+.cbs{display:flex;flex-wrap:wrap;gap:6px 12px}
+.cbs label{display:flex;gap:5px;align-items:center;font-size:12.5px}
+.hits{border:1px solid var(--line);border-radius:8px;margin-top:6px;max-height:220px;overflow:auto}
+.hits div{padding:8px 10px;cursor:pointer;border-bottom:1px solid #f0f2f5}
+.hits div:hover{background:#f6f9fa}
+.center{min-height:70vh;display:grid;place-items:center}
+.coming{text-align:center;max-width:560px;margin:30px auto}
+.coming .big{font-size:44px}
+@media (max-width:900px){
+ .app{grid-template-columns:1fr} aside{position:static;height:auto} nav{display:flex;flex-wrap:wrap} .who{display:none}
+ .g4,.g3{grid-template-columns:repeat(2,1fr)} .fg{grid-template-columns:1fr 1fr} .access-row{grid-template-columns:1fr}
+ .doc{padding:20px}
+}
+</style>
+</head>
+<body>
+<div id="root"><div class="center"><div class="muted">Loading Aculife-IB Portal…</div></div></div>
+<script>
+"use strict";
+const MODULES=[
+ {id:'approval-notes',name:'Approval Note',ic:'📝',desc:'Raise, review and approve approval notes (claims, settlements, appointments) with a 3-level sign-off.'},
+ {id:'priority-sheet',name:'Priority Sheet',ic:'🎯',desc:'Country-wise priority tracker for distributors and RA partners with status history.'},
+ {id:'price-approval',name:'Price Approval',ic:'💲',desc:'Price approval requests and sign-off. Format to be configured.'}
+];
+const DEFAULT_SETTINGS={regions:[],countries:{},classes:{}};
+const NOTE_FLOW={Draft:'Draft',Submitted:'Pending admin approval',Approved:'Approved – awaiting CEO sign-off',Final:'Finally approved (CEO)',Rejected:'Rejected',Returned:'Returned for changes'};
+const NEXT={Submitted:'Approved'};
+const S={user:null,settings:DEFAULT_SETTINGS,notes:[],prio:[],loaded:{},region:'ALL',route:'home'};
+
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const fmtD=d=>{if(!d)return '';const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d);return m?`${m[3]}-${m[2]}-${m[1]}`:d;};
+const fmtT=t=>{try{return new Date(t).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch(e){return t}};
+const num=v=>{const n=parseFloat(String(v??'').replace(/,/g,''));return isNaN(n)?0:n};
+const money=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+function toast(msg,err){const t=document.createElement('div');t.className='toast'+(err?' err':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),err?4200:2400);}
+
+/* ---------- access logic ---------- */
+function regionOf(country){return S.settings.countries?.[country]||'';}
+function clsOf(country){return S.settings.classes?.[country]||'';}
+function countryOptions(sel,writableOnly){
+ const vr=visibleRegions();const by={};
+ Object.entries(S.settings.countries||{}).forEach(([c,r])=>{if(vr.includes(r)&&(!writableOnly||canWrite(r))){(by[r]=by[r]||[]).push(c);}});
+ return Object.keys(by).sort().map(r=>`<optgroup label="${esc(r)}">${by[r].sort((a,b)=>a.localeCompare(b)).map(c=>`<option value="${esc(c)}" ${c===sel?'selected':''}>${esc(c)}${clsOf(c)?' ('+esc(clsOf(c))+')':''}</option>`).join('')}</optgroup>`).join('');
+}
+const ALLMODS=()=>MODULES.map(m=>m.id);
+function me(){
+ const u=S.user;if(!u)return null;
+ const admin=u.role==='admin'||u.role==='super';
+ return {id:u.loginId,label:u.name||u.loginId,role:admin?'Admin':'Region',regions:u.regions||[],modules:ALLMODS(),manage:u.role==='super'};
+}
+const canSeeRegion=r=>{const m=me();return !!m&&m.regions.includes(r);};
+const canWrite=r=>canSeeRegion(r);
+const canApprove=r=>{const m=me();return !!m&&m.role==='Admin';};
+function visibleRegions(){const m=me();return m?m.regions:[];}
+function inScope(r){const vr=visibleRegions();if(!vr.includes(r))return false;return S.region==='ALL'||S.region===r;}
+const nm=id=>id||'—';
+const myId=()=>me()?.id||'';
+
+/* ---------- server API ---------- */
+async function api(method,url,body){
+ let r;
+ try{r=await fetch(url,{method,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'aculife-ib'},body:body!==undefined?JSON.stringify(body):undefined});}
+ catch(e){throw new Error('Cannot reach the portal server. Check your internet connection.');}
+ let j=null;try{j=await r.json();}catch(e){}
+ if(r.status===401&&url!=='/api/login'){S.user=null;modalOpen=false;document.querySelectorAll('.modal-bg').forEach(x=>x.remove());render();}
+ if(!r.ok){const e=new Error((j&&j.error)||'Something went wrong. Please try again.');e.status=r.status;throw e;}
+ return j;
+}
+const wrapDoc=o=>({id:String(o.id),data:()=>o});
+async function loadAll(){
+ const [st,notes,prio]=await Promise.all([api('GET','/api/settings'),api('GET','/api/notes'),api('GET','/api/priority')]);
+ S.settings={...DEFAULT_SETTINGS,...st};S.notes=notes.map(wrapDoc);S.prio=prio.map(wrapDoc);S.loaded.all=true;
+}
+async function refresh(){try{await loadAll();render();}catch(e){}}
+async function safe(p,okMsg){
+ try{await p;if(okMsg)toast(okMsg);await refresh();return true;}
+ catch(e){toast(e.message||'Could not save right now. Please try again.',true);return false;}
+}
+setInterval(()=>{if(S.user&&!modalOpen&&document.visibilityState==='visible')refresh();},60000);
+document.addEventListener('visibilitychange',()=>{if(S.user&&!modalOpen&&document.visibilityState==='visible')refresh();});
+
+/* ---------- login ---------- */
+function loginView(){
+ return `<div class="center" style="min-height:100vh;background:linear-gradient(160deg,#0b2a4a,#0f6f8d)"><div class="card" style="max-width:400px;width:100%;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+ <div class="row" style="margin-bottom:20px"><div class="logo">IB</div><div><b style="font-size:18px">Aculife-IB Portal</b><div class="muted small">International Business</div></div></div>
+ <form id="lf"><label class="f">Login ID<input id="lid" autocomplete="username" placeholder="e.g. IB-UPPERLATAM" style="text-transform:uppercase" autofocus></label>
+ <label class="f" style="margin-top:12px">Password<input id="lpw" type="password" autocomplete="current-password"></label>
+ <div id="lerr" class="small" style="color:var(--bad);min-height:20px;margin-top:8px"></div>
+ <button class="btn p" style="width:100%;justify-content:center" id="lbtn">Sign in</button></form>
+ <p class="muted small" style="margin-top:14px">Your Login ID and password are issued by the IB admin. Each region sees only its own data.</p>
+ </div></div>`;
+}
+function bindLogin(){
+ const f=$('#lf');if(!f)return;
+ f.onsubmit=async e=>{
+  e.preventDefault();const err=$('#lerr');
+  const id=$('#lid').value.trim().toUpperCase(),pw=$('#lpw').value;
+  if(!id||!pw){err.textContent='Enter your Login ID and password.';return;}
+  $('#lbtn').disabled=true;err.textContent='';
+  try{await api('POST','/api/login',{loginId:id,password:pw});S.user=await api('GET','/api/me');await loadAll();S.region='ALL';location.hash='home';render();}
+  catch(x){err.textContent=x.message;}
+  finally{const b=$('#lbtn');if(b)b.disabled=false;}
+ };
+}
+
+/* ---------- routing ---------- */
+const ROUTES=['home','approval-notes','priority-sheet','price-approval','login-ids','regions-setup'];
+function route(){const h=(location.hash||'').slice(1);S.route=ROUTES.includes(h)?h:'home';render();}
+window.addEventListener('hashchange',route);
+
+/* ---------- render ---------- */
+let modalOpen=false;
+function render(){
+ if(modalOpen)return; // don't redraw underneath an open form
+ const root=$('#root');
+ if(!S.booted){return;}
+ const m=me();
+ if(!m||!S.loaded.all){root.innerHTML=loginView();bindLogin();return;}
+ const allowed=r=>r==='home'||(m.modules.includes(r))||(r==='login-ids'&&m.manage)||(r==='regions-setup'&&m.manage);
+ if(!allowed(S.route))S.route='home';
+ const navMods=MODULES.filter(x=>m.modules.includes(x.id));
+ const title={home:'Dashboard','approval-notes':'Approval Notes','priority-sheet':'Priority Sheet','price-approval':'Price Approval','login-ids':'Login IDs & Access','regions-setup':'Regions & Countries'}[S.route];
+ root.innerHTML=`<div class="app">
+ <aside>
+  <div class="brand"><div class="mark"><div class="logo">IB</div><div><b>Aculife-IB</b><small>International Business Portal</small></div></div></div>
+  <nav>
+   <a href="#home" class="${S.route==='home'?'on':''}"><span class="ic">🏠</span>Dashboard ${(()=>{const c=S.notes.filter(d=>{const x=d.data();return (x.status==='Submitted'||(m.manage&&x.status==='Approved'))&&canSeeRegion(x.region);}).length;return c?`<span class="chip" style="margin-left:auto;background:#f39c12;color:#fff">${c}</span>`:''})()}</a>
+   <div class="sep">Programs</div>
+   ${navMods.map(x=>`<a href="#${x.id}" class="${S.route===x.id?'on':''}"><span class="ic">${x.ic}</span>${x.name}</a>`).join('')}
+   ${m.manage?`<div class="sep">Administration</div>
+   <a href="#login-ids" class="${S.route==='login-ids'?'on':''}"><span class="ic">🔐</span>Login IDs & Access</a>
+   <a href="#regions-setup" class="${S.route==='regions-setup'?'on':''}"><span class="ic">🌍</span>Regions & Countries</a>`:''}
+  </nav>
+  <div class="who"><b>${esc(m.label)}</b><span class="small">${esc(m.id)}</span><br>${m.manage?'Super-admin':m.role==='Admin'?'Admin':'Region'} · ${m.role==='Admin'?'All regions':esc(m.regions[0]||'')}<div style="margin-top:8px"><button class="btn sm" id="chpw" style="background:transparent;color:#cfe0f1;border-color:rgba(255,255,255,.2)">Change password</button> <button class="btn sm" id="logout" style="background:transparent;color:#cfe0f1;border-color:rgba(255,255,255,.2)">Sign out</button></div></div>
+ </aside>
+ <main>
+  <div class="top"><h1>${title}</h1>
+   ${['login-ids','regions-setup'].includes(S.route)||m.regions.length<2?'':`<span class="muted small">Region</span>
+   <select id="regionSel" class="btn sm" style="font-weight:500">
+    ${m.regions.length>1?`<option value="ALL">All my regions</option>`:''}
+    ${m.regions.map(r=>`<option ${S.region===r?'selected':''}>${esc(r)}</option>`).join('')}
+   </select>`}
+   ${m.role==='Region'?`<span class="chip teal">${esc(m.regions[0])}</span>`:`<span class="chip teal">Admin</span>`}
+  </div>
+  <div class="content">
+   <div id="view"></div>
+  </div>
+ </main></div>`;
+ if(!m.regions.includes(S.region)&&S.region!=='ALL')S.region='ALL';
+ if(m.regions.length===1)S.region=m.regions[0];
+ const lo=$('#logout');if(lo)lo.onclick=async()=>{try{await api('POST','/api/logout');}catch(e){}S.user=null;S.loaded={};S.notes=[];S.prio=[];location.hash='home';render();};
+ const cpw=$('#chpw');if(cpw)cpw.onclick=changePassword;
+ const rs=$('#regionSel');if(rs){rs.value=S.region;rs.onchange=()=>{S.region=rs.value;render();};}
+ const v=$('#view');
+ ({home:homeView,'approval-notes':notesView,'priority-sheet':prioView,'price-approval':priceView,'login-ids':accessView,'regions-setup':regionsView}[S.route])(v,m);
+}
+
+/* ---------- home ---------- */
+function homeView(v,m){
+ const notes=S.notes.map(d=>({id:d.id,...d.data()})).filter(n=>inScope(n.region));
+ const admin=m.role==='Admin';
+ const pend=notes.filter(n=>n.status==='Submitted').sort((a,b)=>String(subAt(a)).localeCompare(String(subAt(b))));
+ const returned=admin?[]:notes.filter(n=>n.status==='Returned');
+ const finals=m.manage?notes.filter(n=>n.status==='Approved'):[];
+ const tot=pend.reduce((a,n)=>a+num(n.claimValue),0);
+ const rows=list=>`<div class="tbl"><table><thead><tr><th>Program</th><th>No.</th><th>Subject</th><th>Country</th><th>Region</th><th>Raised by</th><th>Submitted on</th><th style="text-align:right">Value (USD)</th><th></th></tr></thead><tbody>
+  ${list.map(n=>`<tr class="click" data-note="${esc(n.id)}"><td><span class="chip teal">📝 Approval Note</span></td><td><b>${esc(n.no)}</b></td><td>${esc(n.subject)}</td><td>${esc(n.territory)}</td><td>${esc(n.region)}</td><td>${esc(n.preparedBy||n.createdBy)}</td><td class="small">${subAt(n)?fmtT(subAt(n)):''}</td><td style="text-align:right">${n.claimValue?money(num(n.claimValue)):''}</td><td><button class="btn sm ${admin?'p':''}">${admin&&n.status==='Submitted'?'Review':'Open'}</button></td></tr>`).join('')}
+ </tbody></table></div>`;
+ v.innerHTML=`
+ <div class="card" style="display:flex;align-items:center;gap:18px;margin-bottom:16px">
+  <div style="font-size:34px;font-weight:700;color:var(--navy)">${pend.length}</div>
+  <div style="flex:1"><b style="font-size:15px">${admin?'Pending for my approval':'Awaiting admin approval'}</b><div class="muted small">${admin?'Requests raised by the regions':'Requests raised by your region'}${tot?` · USD ${money(tot)} in total`:''}</div></div>
+ </div>
+ ${pend.length?rows(pend):`<div class="card empty">✓ Nothing pending${admin?' for your approval':''}.</div>`}
+ ${finals.length?`<h2 style="margin-top:22px">Approved – print, get it signed, upload the scan & record final approval (${finals.length})</h2>${rows(finals)}`:''}
+ ${returned.length?`<h2 style="margin-top:22px">Returned to you for changes</h2>${rows(returned)}`:''}`;
+ v.querySelectorAll('[data-note]').forEach(e=>e.onclick=()=>openNote(e.dataset.note));
+}
+function subAt(n){const t=[...(n.trail||[])].reverse().find(x=>/^Submitted/.test(x.action||''));return t?t.at:n.updatedAt;}
+
+/* ---------- approval notes ---------- */
+let noteFilter={q:'',status:''};
+function notesView(v,m){
+ const list=S.notes.map(d=>({id:d.id,...d.data()})).filter(n=>inScope(n.region))
+  .filter(n=>!noteFilter.status||n.status===noteFilter.status)
+  .filter(n=>{const q=noteFilter.q.toLowerCase();return !q||[n.no,n.subject,n.territory,n.preparedBy].join(' ').toLowerCase().includes(q);})
+  .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+ const canNew=visibleRegions().some(r=>canWrite(r));
+ v.innerHTML=`<div class="bar">
+  <input type="search" id="nq" placeholder="Search number, subject, territory…" value="${esc(noteFilter.q)}">
+  <select id="ns"><option value="">All statuses</option>${Object.entries(NOTE_FLOW).map(([k,l])=>`<option value="${k}" ${noteFilter.status===k?'selected':''}>${l}</option>`).join('')}</select>
+  <span class="sp"></span>${canNew?`<button class="btn p" id="newNote">+ New approval note</button>`:''}
+ </div>
+ <div class="tbl"><table><thead><tr><th>No.</th><th>Subject</th><th>Country</th><th>Region</th><th>Prepared by</th><th>Date</th><th style="text-align:right">Value (USD)</th><th>Status</th></tr></thead><tbody>
+ ${list.map(n=>`<tr class="click" data-id="${esc(n.id)}"><td><b>${esc(n.no)}</b></td><td>${esc(n.subject)}</td><td>${esc(n.territory)}</td><td>${esc(n.region)}</td><td>${esc(n.preparedBy)}</td><td>${fmtD(n.date)}</td><td style="text-align:right">${n.claimValue?money(num(n.claimValue)):''}</td><td><span class="st ${esc(n.status)}">${esc(NOTE_FLOW[n.status]||n.status)}</span></td></tr>`).join('')||`<tr><td colspan="8" class="empty">No approval notes in this region yet.</td></tr>`}
+ </tbody></table></div>`;
+ const q=$('#nq');q.oninput=()=>{noteFilter.q=q.value;const p=q.selectionStart;notesView(v,m);const n=$('#nq');n.focus();n.setSelectionRange(p,p);};
+ $('#ns').onchange=e=>{noteFilter.status=e.target.value;notesView(v,m);};
+ const nb=$('#newNote');if(nb)nb.onclick=()=>editNote(null);
+ v.querySelectorAll('tr[data-id]').forEach(r=>r.onclick=()=>openNote(r.dataset.id));
+}
+function nextNoteNo(){
+ const y=new Date().getFullYear();let max=0;
+ S.notes.forEach(d=>{const mm=/(\d+)$/.exec(d.data().no||'');if(mm&&String(d.data().no).includes(String(y)))max=Math.max(max,+mm[1]);});
+ return `AN/IB/${y}/${String(max+1).padStart(3,'0')}`;
+}
+function modal(html,wide){
+ modalOpen=true;
+ const bg=document.createElement('div');bg.className='modal-bg';bg.innerHTML=`<div class="modal ${wide?'wide':''}">${html}</div>`;
+ document.body.appendChild(bg);
+ const close=()=>{bg.remove();modalOpen=false;render();};
+ bg.addEventListener('mousedown',e=>{if(e.target===bg)close();});
+ return {el:bg,close};
+}
+const SECTIONS=[['objective','Objective','What is this note for? The decision or approval being sought.'],['background','Background','Context, history, facts and figures. Paste tables from Excel, text from Word, or screenshots.'],['proposal','Proposal','What you propose, value involved, and the approval requested.']];
+const OK_TAGS=new Set('P BR B STRONG I EM U UL OL LI TABLE THEAD TBODY TFOOT TR TD TH H1 H2 H3 H4 DIV SPAN IMG A SUB SUP HR'.split(' '));
+const DROP_TAGS=new Set('SCRIPT STYLE META LINK TITLE XML IFRAME OBJECT EMBED SVG FORM INPUT BUTTON SELECT TEXTAREA NOSCRIPT TEMPLATE HEAD'.split(' '));
+function clean(html){
+ if(!html)return '';
+ const d=new DOMParser().parseFromString('<body>'+html+'</body>','text/html');
+ const walk=node=>{[...node.childNodes].forEach(c=>{
+  if(c.nodeType===3)return;
+  if(c.nodeType!==1){c.remove();return;}
+  const t=c.tagName.toUpperCase();
+  if(DROP_TAGS.has(t)){c.remove();return;}
+  walk(c);
+  const st=(c.getAttribute('style')||'').toLowerCase();
+  if(!OK_TAGS.has(t)){c.replaceWith(...c.childNodes);return;}
+  if(t==='SPAN'&&/font-weight:\s*(bold|[6-9]00)/.test(st)){const b=document.createElement('b');b.append(...c.childNodes);c.replaceWith(b);return;}
+  for(const a of [...c.attributes]){const n=a.name.toLowerCase();
+   const keep=((n==='colspan'||n==='rowspan')&&/^\d{1,2}$/.test(a.value))||(t==='IMG'&&n==='src'&&/^data:image\/(png|jpe?g|gif|webp);base64,[a-z0-9+\/=\s]+$/i.test(a.value))||(t==='A'&&n==='href'&&/^https?:\/\//i.test(a.value));
+   if(!keep)c.removeAttribute(a.name);}
+  if(t==='IMG'&&!c.getAttribute('src')){c.remove();return;}
+  if(t==='A'){c.setAttribute('target','_blank');c.setAttribute('rel','noopener noreferrer');}
+ });};
+ walk(d.body);
+ return d.body.innerHTML.replace(/(<br>\s*){3,}/g,'<br><br>').trim();
+}
+const isEmptyRich=h=>{if(!h)return true;const d=document.createElement('div');d.innerHTML=h;return !d.textContent.trim()&&!d.querySelector('img,table');};
+function imgToData(src){return new Promise((ok,no)=>{const go=url=>{const im=new Image();im.onload=()=>{const max=1100;const s=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*s));c.height=Math.max(1,Math.round(im.height*s));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);ok({url:c.toDataURL('image/jpeg',0.72),w:c.width,h:c.height});};im.onerror=no;im.src=url;};
+ if(typeof src==='string')go(src);else{const r=new FileReader();r.onload=()=>go(r.result);r.onerror=no;r.readAsDataURL(src);}});}
+function rteHtml(key,label,hint,html){
+ return `<div class="sec"><h4>${label}</h4>
+ <div class="rte-bar" data-for="${key}">
+  <button type="button" data-c="bold" title="Bold"><b>B</b></button><button type="button" data-c="italic" title="Italic"><i>I</i></button><button type="button" data-c="underline" title="Underline"><u>U</u></button>
+  <button type="button" data-c="insertUnorderedList" title="Bullets">• List</button><button type="button" data-c="insertOrderedList" title="Numbering">1. List</button>
+  <button type="button" data-c="table" title="Insert table">▦ Table</button><button type="button" data-c="image" title="Insert image">🖼 Image</button><button type="button" data-c="removeFormat" title="Clear formatting">Clear format</button>
+ </div>
+ <div class="rte" contenteditable="true" data-r="${key}" data-ph="${esc(hint)}">${clean(html)}</div></div>`;
+}
+function bindRte(el){
+ const file=document.createElement('input');file.type='file';file.accept='image/*';file.multiple=true;let target=null;
+ const insertImgs=async files=>{for(const f of files){if(!/^image\//.test(f.type))continue;try{const r=await imgToData(f);document.execCommand('insertHTML',false,`<img src="${r.url}"><br>`);}catch(e){toast('Could not read that image',true);}}};
+ file.onchange=async()=>{if(target){target.focus();if(savedRange){const s=getSelection();s.removeAllRanges();s.addRange(savedRange);}}await insertImgs([...file.files]);file.value='';};
+ let savedRange=null;
+ el.querySelectorAll('.rte').forEach(ed=>{
+  ed.addEventListener('blur',()=>{const s=getSelection();if(s.rangeCount&&ed.contains(s.anchorNode))savedRange=s.getRangeAt(0).cloneRange();});
+  ed.addEventListener('paste',async e=>{
+   const cd=e.clipboardData;if(!cd)return;
+   const html=cd.getData('text/html');
+   const files=[...(cd.files||[])].filter(f=>/^image\//.test(f.type));
+   if(html){e.preventDefault();let h=clean(html);
+    // shrink any big pasted inline images
+    const tmp=document.createElement('div');tmp.innerHTML=h;
+    for(const im of tmp.querySelectorAll('img')){if(im.src.length>120000){try{im.src=(await imgToData(im.src)).url;}catch(x){im.remove();}}}
+    document.execCommand('insertHTML',false,tmp.innerHTML);return;}
+   if(files.length){e.preventDefault();await insertImgs(files);return;}
+  });
+  ed.addEventListener('drop',async e=>{const fs=[...(e.dataTransfer?.files||[])].filter(f=>/^image\//.test(f.type));if(fs.length){e.preventDefault();ed.focus();await insertImgs(fs);}});
+ });
+ el.querySelectorAll('.rte-bar').forEach(bar=>{
+  const ed=el.querySelector(`[data-r="${bar.dataset.for}"]`);
+  bar.querySelectorAll('button').forEach(b=>{
+   b.addEventListener('mousedown',e=>e.preventDefault());
+   b.onclick=()=>{const c=b.dataset.c;ed.focus();
+    if(c==='table'){document.execCommand('insertHTML',false,'<table><tbody>'+'<tr>'+'<td>&nbsp;</td>'.repeat(3)+'</tr>'.repeat(1)+('<tr>'+'<td>&nbsp;</td>'.repeat(3)+'</tr>').repeat(2)+'</tbody></table><br>');return;}
+    if(c==='image'){target=ed;const s=getSelection();savedRange=s.rangeCount?s.getRangeAt(0).cloneRange():null;file.click();return;}
+    document.execCommand(c,false,null);};
+  });
+ });
+}
+
+function editNote(id){
+ const n=id?S.notes.find(d=>d.id===id)?.data():null;
+ const d=n||{no:nextNoteNo(),date:today(),department:'International Marketing',preparedBy:''};
+ const {el,close}=modal(`<h3>${id?'Edit':'New'} approval note</h3>
+ <div class="fg">
+  <label class="f w4">Subject<input data-f="subject" value="${esc(d.subject)}" placeholder="Approval for …"></label>
+  <label class="f">Note no.<input data-f="no" value="${esc(d.no)}"></label>
+  <label class="f">Date<input type="date" data-f="date" value="${esc(d.date)}"></label>
+  <label class="f">Country<select data-f="territory"><option value="">Select country…</option>${countryOptions(d.territory,true)}</select></label>
+  <label class="f">Region<input data-f="region" value="${esc(d.region||regionOf(d.territory)||(visibleRegions().length===1?visibleRegions()[0]:''))}" readonly style="background:#f4f6f9"></label>
+  <label class="f w2">Prepared by<input data-f="preparedBy" value="${esc(d.preparedBy)}"></label>
+  <label class="f w2">Department<input data-f="department" value="${esc(d.department)}"></label>
+ </div>
+ ${SECTIONS.map(([k,l,h])=>rteHtml(k,l,h,d[k])).join('')}
+ <div class="fg sec">
+  <label class="f">Value for approval (USD, optional)<input data-f="claimValue" value="${esc(d.claimValue)}" placeholder="e.g. 38968"></label>
+  <label class="f">Reviewed by (optional)<input data-f="reviewer1" value="${esc(d.reviewer1)}"></label>
+  <label class="f">Reviewed by (optional)<input data-f="reviewer2" value="${esc(d.reviewer2)}"></label>
+  <label class="f">Approver (Admin)<input data-f="approver" value="${esc(d.approver)}"></label>
+ </div>
+ <div class="row" style="margin-top:18px"><button class="btn" id="cx">Cancel</button><span class="sp"></span>
+  <button class="btn" id="svD">Save as draft</button><button class="btn p" id="svS">Submit for approval</button></div>`,true);
+ bindRte(el);
+ const tSel=el.querySelector('[data-f=territory]');tSel.onchange=()=>{el.querySelector('[data-f=region]').value=regionOf(tSel.value);};
+ el.querySelector('#cx').onclick=close;
+ const save=async(submit)=>{
+  const o={};el.querySelectorAll('[data-f]').forEach(i=>o[i.dataset.f]=i.value.trim());
+  SECTIONS.forEach(([k])=>{const h=clean(el.querySelector(`[data-r="${k}"]`).innerHTML);o[k]=isEmptyRich(h)?'':h;});
+  if(!o.subject){toast('Subject is required',true);return;}
+  if(!o.territory){toast('Select the country',true);return;}
+  o.region=regionOf(o.territory)||o.region;
+  if(!canWrite(o.region)){toast('You cannot raise notes for that region',true);return;}
+  if(submit&&!o.objective){toast('Please fill in the Objective before submitting',true);return;}
+  const body={...o,submit};
+  if(JSON.stringify(body).length>3800000){toast('This note is too large to save, mostly because of images. Remove or crop some screenshots and try again.',true);return;}
+  if(await safe(id?api('PUT','/api/notes/'+id,body):api('POST','/api/notes',body),submit?'Submitted for approval':'Draft saved')){el.remove();modalOpen=false;render();}
+ };
+ el.querySelector('#svD').onclick=()=>save(false);
+ el.querySelector('#svS').onclick=()=>save(true);
+}
+function openNote(id){
+ const doc=S.notes.find(d=>d.id===id);if(!doc)return;const n=doc.data();
+ if(!canSeeRegion(n.region)){toast('This note belongs to a region you cannot access',true);return;}
+ const editable=canWrite(n.region)&&['Draft','Returned'].includes(n.status)&&(n.createdBy===myId()||me().role==='Admin');
+ const deletable=(editable&&n.createdBy===myId())||me().manage;
+ const nx=NEXT[n.status];
+ const approvable=nx&&canApprove(n.region);
+ const nxLabel='Approve';
+ const finalable=n.status==='Approved'&&me().manage;
+ const printable=['Approved','Final'].includes(n.status);
+ const canUpload=printable&&me().role==='Admin';
+ const {el,close}=modal(`
+ <div class="row" style="margin-bottom:14px"><span class="st ${esc(n.status)}">${esc(NOTE_FLOW[n.status]||n.status)}</span><span class="chip">${esc(n.region)}</span><span class="sp"></span>
+  ${printable?`<button class="btn sm n" id="pr">🖨 Print / Download PDF</button>`:''}
+  ${editable?`<button class="btn sm" id="ed">Edit</button>`:''}
+  ${deletable?`<button class="btn sm d" id="del">Delete</button>`:''}
+  <button class="btn sm" id="cx">Close</button></div>
+ <div class="doc">
+  <div class="t">Approval Note</div>
+  <table class="hd"><tr><td class="k">Subject</td><td>${esc(n.subject)}</td><td class="k" style="width:80px">No.</td><td style="width:150px">${esc(n.no)}</td></tr>
+  <tr><td class="k">Prepared by</td><td>${esc(n.preparedBy)}</td><td class="k">Date</td><td>${fmtD(n.date)}</td></tr>
+  <tr><td class="k">Department</td><td colspan="3">${esc(n.department)}</td></tr>
+  <tr><td class="k">Country</td><td>${esc(n.territory)}</td><td class="k">Region</td><td>${esc(n.region)}</td></tr></table>
+  ${SECTIONS.map(([k,l])=>isEmptyRich(n[k])?'':`<h5>${l}</h5><div class="rich">${clean(n[k])}</div>`).join('')}
+  ${n.claimValue?`<p><b>Value for approval: USD ${money(num(n.claimValue))}</b></p>`:''}
+  <div class="sig">
+   <div><b>Raised by</b><br>${esc(n.preparedBy)||'—'}<br><span class="small muted">${esc(n.region)}${n.createdBy?' · '+esc(n.createdBy):''}</span></div>
+   <div><b>Approved by</b><br>${esc(n.approver)||'—'}<br>${sigStamp(n,'Approved')}</div>
+   <div><b>Mr Guhaprasad</b><br>${n.status==='Final'?`<span class="small" style="color:var(--ok)">✓ Paper approval on ${fmtD(n.ceoDate)}${n.ceoRef?' · Ref '+esc(n.ceoRef):''}</span>`:'<span class="small muted">Pending</span>'}</div>
+  </div>
+ </div>
+ ${finalable?`<div class="card" style="margin-top:14px;border-color:var(--teal)"><h2>Record final approval (after CEO's paper approval)</h2>
+  <p class="muted small" style="margin-top:-6px">Print this note, get the signature on paper, scan it, then upload the scan and record the final approval here.</p>
+  <div class="fg"><label class="f">CEO approval date<input type="date" id="cd" value="${today()}"></label><label class="f">Reference / file no. (optional)<input id="crf"></label><label class="f w2">Remarks (optional)<input id="crm"></label>
+  <label class="f w4">Signed copy (scan / photo of the signed note – PDF, JPG or PNG, max 15 MB)<input type="file" id="cscan" accept="application/pdf,image/jpeg,image/png"></label></div>
+  <div class="row" style="margin-top:10px"><button class="btn p" id="fin">✓ Mark as finally approved</button></div></div>`:''}
+ ${approvable?`<div class="card" style="margin-top:14px"><h2>Your action</h2>
+  <label class="f">Comment (optional; required to return or reject)<textarea id="cm" style="min-height:60px"></textarea></label>
+  <div class="row" style="margin-top:10px"><button class="btn p" id="ap">✓ ${nxLabel}</button><button class="btn" id="rt">↩ Return for changes</button><button class="btn d" id="rj">✕ Reject</button></div></div>`:''}
+ ${(n.files||[]).length||canUpload?`<div class="card" style="margin-top:14px"><div class="row"><h2 style="margin:0;flex:1">📎 Signed copies</h2>${canUpload?`<label class="btn sm" style="cursor:pointer">⬆ Upload signed scan<input type="file" id="upscan" accept="application/pdf,image/jpeg,image/png" style="display:none"></label>`:''}</div>
+  ${(n.files||[]).map(f=>`<div class="row" style="padding:8px 0;border-bottom:1px solid #f0f2f5"><span>${f.mime==='application/pdf'?'📄':'🖼'}</span><a href="/api/notes/${esc(n.id)}/files/${esc(f.id)}" target="_blank" rel="noopener"><b>${esc(f.filename)}</b></a><span class="muted small">${Math.max(1,Math.round(f.size/1024))} KB · ${esc(f.by)} · ${fmtT(f.at)}</span><span class="sp"></span><a class="btn sm" href="/api/notes/${esc(n.id)}/files/${esc(f.id)}?download=1">Download</a>${me().manage?` <button class="btn sm d" data-rmf="${esc(f.id)}">Remove</button>`:''}</div>`).join('')||'<div class="muted small" style="padding-top:8px">No signed copy uploaded yet.</div>'}</div>`:''}
+ <div class="card" style="margin-top:14px"><h2>Approval trail</h2><ul class="trail">${(n.trail||[]).map(t=>`<li><b>${esc(t.action)}</b> — ${esc(nm(t.by))}, ${fmtT(t.at)}${t.comment?`<div class="muted small">“${esc(t.comment)}”</div>`:''}</li>`).join('')||'<li class="muted">No actions yet.</li>'}</ul></div>`,true);
+ el.querySelector('#cx').onclick=close;
+ const ed=el.querySelector('#ed');if(ed)ed.onclick=()=>{el.remove();modalOpen=false;editNote(id);};
+ const dl=el.querySelector('#del');if(dl)dl.onclick=async()=>{if(dl.dataset.sure){if(await safe(api('DELETE','/api/notes/'+id),'Note deleted')){el.remove();modalOpen=false;render();}}else{dl.dataset.sure=1;dl.textContent='Click again to delete';}};
+ const act=async(status,label,needC)=>{
+  const c=el.querySelector('#cm').value.trim();
+  if(needC&&!c){toast('Please add a comment',true);return;}
+  const action={Approved:'approve',Returned:'return',Rejected:'reject'}[status];
+  if(await safe(api('POST','/api/notes/'+id+'/action',{action,comment:c}),label)){el.remove();modalOpen=false;render();}
+ };
+ const pr=el.querySelector('#pr');if(pr)pr.onclick=()=>printNote(n);
+ const up=el.querySelector('#upscan');if(up)up.onchange=async()=>{const f=up.files[0];if(!f)return;if(await uploadScan(id,f)){await refresh();closeM(el);openNote(id);}};
+ el.querySelectorAll('[data-rmf]').forEach(b=>b.onclick=async()=>{if(b.dataset.sure){if(await safe(api('DELETE',`/api/notes/${id}/files/${b.dataset.rmf}`),'Removed')){closeM(el);openNote(id);}}else{b.dataset.sure=1;b.textContent='Confirm';}});
+ const fin=el.querySelector('#fin');if(fin)fin.onclick=async()=>{
+  const cd=el.querySelector('#cd').value;if(!cd){toast('Enter the CEO approval date',true);return;}
+  const sf=el.querySelector('#cscan').files[0];
+  if(!sf&&!(n.files||[]).length&&!fin.dataset.warn){fin.dataset.warn=1;toast('No signed scan attached. Attach it, or click again to finish without it.',true);return;}
+  fin.disabled=true;
+  if(sf&&!(await uploadScan(id,sf))){fin.disabled=false;return;}
+  if(await safe(api('POST','/api/notes/'+id+'/action',{action:'final',ceoDate:cd,ceoRef:el.querySelector('#crf').value.trim(),comment:el.querySelector('#crm').value.trim()}),'Marked as finally approved')){el.remove();modalOpen=false;render();}
+ };
+ if(approvable){
+  el.querySelector('#ap').onclick=()=>act('Approved','Approved');
+  el.querySelector('#rt').onclick=()=>act('Returned','Returned for changes',true);
+  el.querySelector('#rj').onclick=()=>act('Rejected','Rejected',true);
+ }
+}
+async function uploadScan(id,f){
+ if(!['application/pdf','image/jpeg','image/png'].includes(f.type)){toast('Upload a PDF, JPG or PNG file',true);return false;}
+ if(f.size>15*1024*1024){toast('File is larger than 15 MB',true);return false;}
+ try{toast('Uploading signed copy…');const r=await fetch(`/api/notes/${id}/files`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':f.type,'X-Requested-With':'aculife-ib','X-Filename':encodeURIComponent(f.name)},body:f});
+  if(!r.ok){let m='Upload failed';try{m=(await r.json()).error||m;}catch(e){}throw new Error(m);}toast('Signed copy uploaded');return true;}
+ catch(e){toast(e.message,true);return false;}
+}
+function sigStamp(n,step){const t=[...(n.trail||[])].reverse().find(x=>x.step===step);return t?`<span class="small" style="color:var(--ok)">✓ ${esc(nm(t.by))} · ${fmtT(t.at)}</span>`:`<span class="small muted">Pending</span>`;}
+
+/* ---------- print (PDF) ---------- */
+function loadScript(src){return new Promise((ok,no)=>{if(document.querySelector(`script[src="${src}"]`)){ok();return;}const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s);});}
+async function buildNotePdf(n,pagesHint){
+ const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'pt',format:'a4'});
+ const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=40;let y=48;
+ const need=h=>{if(y+h>H-50){doc.addPage();y=50;}};
+ doc.setFont('helvetica','bold');doc.setFontSize(15);const t='Approval Note';const tw=doc.getTextWidth(t);
+ doc.text(t,(W-tw)/2,y);doc.setLineWidth(.8);doc.line((W-tw)/2,y+3,(W+tw)/2,y+3);y+=18;
+ doc.autoTable({startY:y,theme:'grid',margin:{left:M,right:M},styles:{fontSize:9.5,cellPadding:5,lineColor:[120,120,120],lineWidth:.5,textColor:20},
+  columnStyles:{0:{fontStyle:'bold',cellWidth:90,fillColor:[244,246,249]},2:{fontStyle:'bold',cellWidth:70,fillColor:[244,246,249]},3:{cellWidth:110}},
+  body:[['Subject',n.subject||'','#',n.no||''],['Prepared by',n.preparedBy||'','Date',fmtD(n.date)],['Department',n.department||'','No. of pages',String(pagesHint||1)],['Country',n.territory||'','Region',n.region||'']]});
+ y=doc.lastAutoTable.finalY+20;
+ const inlineTags=new Set(['B','STRONG','I','EM','U','SPAN','A','SUB','SUP']);
+ const textOf=node=>{const c=node.cloneNode(true);if(c.querySelectorAll)c.querySelectorAll('br').forEach(b=>b.replaceWith('\n'));return c.textContent;};
+ const write=(text,bold,indent)=>{const x=M+(indent||0);doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(10);
+  String(text).replace(/ /g,' ').split('\n').forEach(line=>{line=line.replace(/[ \t]+/g,' ').trim();if(!line){y+=5;return;}doc.splitTextToSize(line,W-2*M-(indent||0)).forEach(l=>{need(14);doc.text(l,x,y);y+=13.5;});});};
+ const addImg=async src=>{try{const r=await imgToData(src);let w=Math.min(W-2*M,r.w*0.6),h=w*r.h/r.w;const maxH=H-120;if(h>maxH){h=maxH;w=h*r.w/r.h;}need(h+8);doc.addImage(r.url,'JPEG',M,y,w,h);y+=h+10;}catch(e){}};
+ const block=async node=>{
+  if(node.nodeType===3){const t=node.textContent;if(t.trim())write(t);return;}
+  if(node.nodeType!==1)return;const tag=node.tagName;
+  if(tag==='TABLE'){y+=2;need(30);doc.autoTable({html:node,startY:y,theme:'grid',margin:{left:M,right:M},styles:{fontSize:8,cellPadding:3,lineColor:[120,120,120],lineWidth:.4,textColor:20,fillColor:false},headStyles:{fillColor:[230,234,240],textColor:20,fontStyle:'bold'},useCss:false});y=doc.lastAutoTable.finalY+10;return;}
+  if(tag==='IMG'){await addImg(node.getAttribute('src'));return;}
+  if(tag==='UL'||tag==='OL'){let i=1;for(const li of node.children){write((tag==='OL'?(i++)+'. ':'•  ')+textOf(li).replace(/\s*\n\s*/g,' '),false,10);}y+=4;return;}
+  if(tag==='BR'){y+=6;return;}
+  if(tag==='HR'){need(10);doc.setLineWidth(.4);doc.line(M,y,W-M,y);y+=10;return;}
+  if(/^H[1-4]$/.test(tag)){y+=2;write(textOf(node),true);return;}
+  if(node.querySelector('table,img,ul,ol,div,p,h1,h2,h3,h4')){await blocks(node);return;}
+  write(textOf(node),tag==='B'||tag==='STRONG');if(tag==='P')y+=4;
+ };
+ const blocks=async parent=>{let buf=[];const flush=()=>{if(!buf.length)return;const t=buf.map(textOf).join('');const allBold=buf.every(b=>b.nodeType===1&&(b.tagName==='B'||b.tagName==='STRONG'));if(t.trim())write(t,allBold);buf=[];};
+  for(const c of [...parent.childNodes]){if(c.nodeType===3||(c.nodeType===1&&inlineTags.has(c.tagName)&&!c.querySelector('img,table'))){buf.push(c);continue;}flush();await block(c);}flush();};
+ const rich=async(head,html)=>{if(isEmptyRich(html))return;need(34);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(head,M,y);y+=15;const box=document.createElement('div');box.innerHTML=clean(html);await blocks(box);y+=8;};
+ for(const [k,l] of SECTIONS)await rich(l,n[k]);
+ if(n.claimValue){need(20);doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.text('Value for approval: USD '+money(num(n.claimValue)),M,y);y+=20;}
+ // signatures
+ need(110);y+=34;const cw=(W-2*M)/4;
+ const appr=[...(n.trail||[])].reverse().find(x=>x.step==='Approved');
+ const sig=[['Prepared by',n.preparedBy||''],['Reviewed by',[n.reviewer1,n.reviewer2].filter(Boolean).join(', ')],['Approved by',n.approver||''],['Mr Guhaprasad','']];
+ sig.forEach((s,i)=>{const x=M+i*cw;doc.setLineWidth(.5);doc.line(x+4,y,x+cw-10,y);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text(s[0],x+4,y+13);doc.setFont('helvetica','normal');doc.splitTextToSize(s[1],cw-14).slice(0,3).forEach((l,k)=>doc.text(l,x+4,y+26+k*11));});
+ if(n.status==='Final'){doc.setFontSize(8);doc.setTextColor(30,132,73);doc.text('CEO approval on paper: '+fmtD(n.ceoDate),M+3*cw+4,y+62,{maxWidth:cw-10});doc.setTextColor(20);}
+ const pages=doc.getNumberOfPages();
+ for(let i=1;i<=pages;i++){doc.setPage(i);doc.setFontSize(7.5);doc.setTextColor(120);doc.text(`Aculife-IB Portal · ${n.no||''} · Page ${i} of ${pages}`,M,H-24);doc.setTextColor(20);}
+ return {doc,pages};
+}
+function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+async function printNote(n){
+ try{
+  toast('Preparing print copy…');
+  await loadScript('/vendor/jspdf.js');
+  await loadScript('/vendor/jspdf-autotable.js');
+  let r=await buildNotePdf(n,1);if(r.pages>1)r=await buildNotePdf(n,r.pages);
+  const blob=r.doc.output('blob');
+  saveBlob(blob,`Approval Note ${String(n.no||'').replace(/[\/\\]/g,'-')} - ${n.territory||''}.pdf`);
+  try{const u=URL.createObjectURL(blob);const w=window.open(u,'_blank');if(!w)toast('PDF downloaded – open it to print');setTimeout(()=>URL.revokeObjectURL(u),60000);}catch(e){}
+ }catch(e){toast('Could not create the print copy. Please try again.',true);}
+}
+
+/* ---------- priority sheet (partners with task lines) ---------- */
+let pf={q:'',country:'',priority:'',type:'',status:'Open',stale:false};
+const lastUpd=t=>{const u=(t.updates||[]).filter(x=>!x.system);return [u[u.length-1],u[u.length-2]];};
+const updToday=t=>(t.updates||[]).some(u=>u.on===today()&&!u.system);
+const overdue=t=>t.tcd&&t.tcd<today()&&t.status!=='Done';
+function prioScope(){
+ return S.prio.map(d=>d.data()).filter(p=>inScope(p.region)).sort((a,b)=>(a.order??0)-(b.order??0));
+}
+function prioView(v,m){
+ const all=prioScope();
+ const countries=[...new Set(all.map(p=>p.country))].sort();
+ const qq=pf.q.toLowerCase();
+ const taskOk=t=>(!pf.status||(pf.status==='Open'?t.status!=='Done':t.status===pf.status))&&(!pf.stale||(t.status!=='Done'&&!updToday(t)));
+ const list=all.filter(p=>(!pf.country||p.country===pf.country)&&(!pf.priority||p.priority===pf.priority)&&(!pf.type||p.type===pf.type))
+  .map(p=>{const hit=!qq||[p.partner,p.country].join(' ').toLowerCase().includes(qq);
+   const tasks=p.tasks.filter(t=>taskOk(t)&&(hit||[t.task,...(t.updates||[]).slice(-2).map(u=>u.text)].join(' ').toLowerCase().includes(qq)));
+   return {...p,shown:tasks,hit};})
+  .filter(p=>p.shown.length||(p.hit&&!p.tasks.length&&!pf.stale));
+ const open=all.flatMap(p=>p.tasks).filter(t=>t.status!=='Done');
+ const done=open.filter(updToday).length;
+ const canAdd=visibleRegions().some(r=>canWrite(r));
+ const regLabel=S.region==='ALL'?(m.regions.length>1?'all regions':m.regions[0]):S.region;
+ v.innerHTML=`
+ <div class="card" style="display:flex;align-items:center;gap:18px;margin-bottom:14px;padding:14px 18px">
+  <div><div style="font-size:22px;font-weight:700;color:${done===open.length&&open.length?'var(--ok)':'var(--navy)'}">${done} / ${open.length}</div><div class="muted small">open tasks updated today (${fmtD(today())})</div></div>
+  <div style="flex:1;height:8px;background:#eef1f4;border-radius:9px;overflow:hidden;max-width:360px"><div style="height:100%;width:${open.length?Math.round(done*100/open.length):0}%;background:var(--teal)"></div></div>
+  <span class="sp"></span>
+  ${canAdd&&open.length?`<button class="btn p" id="daily">📝 Today's update</button>`:''}
+  <button class="btn n" id="xls">⬇ Download Excel (${esc(regLabel)})</button>
+ </div>
+ <div class="bar">
+  <input type="search" id="pq" placeholder="Search distributor, task, update…" value="${esc(pf.q)}">
+  <select id="pc"><option value="">All countries</option>${countries.map(c=>`<option ${pf.country===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+  <select id="pp"><option value="">All priorities</option>${['VH','H','M'].map(c=>`<option ${pf.priority===c?'selected':''}>${c}</option>`).join('')}</select>
+  <select id="pt"><option value="">Distributor & RA</option>${['Distributor','RA'].map(c=>`<option ${pf.type===c?'selected':''}>${c}</option>`).join('')}</select>
+  <select id="ps"><option value="Open" ${pf.status==='Open'?'selected':''}>Open tasks</option><option value="Done" ${pf.status==='Done'?'selected':''}>Done tasks</option><option value="" ${!pf.status?'selected':''}>All tasks</option></select>
+  <label class="small row" style="gap:5px"><input type="checkbox" id="pstale" ${pf.stale?'checked':''}> <span style="color:#d68910">●</span> Not updated today</label>
+  <span class="sp"></span>${canAdd?`<button class="btn" id="padd">+ Add distributor / RA</button>`:''}
+ </div>
+ <div class="tbl" style="max-height:calc(100vh - 290px)"><table class="ptbl"><thead><tr><th>Country</th><th>Pri.</th><th>Type</th><th>Distributor / RA</th><th>#</th><th style="min-width:180px">Task</th><th>TCD</th><th>Previous TCD</th><th style="min-width:230px">Latest update</th><th style="min-width:170px">Previous update</th></tr></thead><tbody>
+ ${list.map(p=>{const ts=p.shown;const rs=Math.max(1,ts.length);
+  const pcell=`<td rowspan="${rs}" class="pc"><b>${esc(p.country)}</b>${clsOf(p.country)?` <span class="chip">${esc(clsOf(p.country))}</span>`:''}${m.role==='Admin'?`<div class="muted small">${esc(p.region)}</div>`:''}</td>
+   <td rowspan="${rs}" class="pc"><span class="pr ${esc(p.priority)}">${esc(p.priority)}</span></td><td rowspan="${rs}" class="pc">${esc(p.type)}</td>
+   <td rowspan="${rs}" class="pc"><b>${esc(p.partner)}</b>${p.value?`<div class="muted small">USD ${esc(p.value)} Lac</div>`:''}
+    ${canWrite(p.region)?`<div class="row" style="gap:4px;margin-top:6px;flex-wrap:nowrap"><button class="btn sm" data-addtask="${p.id}">+ Task</button><button class="btn sm" data-editp="${p.id}">Edit</button></div>`:''}</td>`;
+  if(!ts.length)return `<tr>${pcell}<td colspan="6" class="muted small">No tasks yet — click “+ Task”.</td></tr>`;
+  return ts.map((t,i)=>{const [l,pv]=lastUpd(t);const num=p.tasks.indexOf(t)+1;
+   return `<tr class="click task ${t.status==='Done'?'done':''}" data-task="${t.id}">${i===0?pcell:''}
+    <td class="muted" style="white-space:nowrap">${num} ${t.status==='Done'?'':updToday(t)?'<span title="Updated today" style="color:var(--ok)">✓</span>':'<span title="Not updated today" style="color:#d68910">●</span>'}</td>
+    <td><div class="clamp" style="max-width:240px">${esc(t.task)}</div>${t.status!=='Open'?`<span class="st ${t.status==='Done'?'Approved':'Returned'}" style="font-size:11px">${esc(t.status)}</span>`:''}</td>
+    <td style="white-space:nowrap" class="${overdue(t)?'od':''}">${t.tcd?fmtD(t.tcd):'<span class="muted">—</span>'}${overdue(t)?'<div class="small">overdue</div>':''}</td>
+    <td class="small muted" style="white-space:nowrap">${(t.tcdHistory||[]).slice().reverse().slice(0,3).map(h=>`<s>${fmtD(h.tcd)}</s>`).join('<br>')}${(t.tcdHistory||[]).length>3?`<br>+${t.tcdHistory.length-3} more`:''}</td>
+    <td>${l?`<b class="small">${fmtD(l.on)}</b> <span class="muted small">· ${esc(l.by)}</span><div class="clamp" style="max-width:300px">${esc(l.text)}</div>`:'<span class="muted small">No update yet</span>'}</td>
+    <td class="small muted">${pv?`<b>${fmtD(pv.on)}</b><div class="clamp" style="max-width:220px">${esc(pv.text)}</div>`:''}</td>
+    </tr>`;}).join('');
+ }).join('')||`<tr><td colspan="10" class="empty">No rows match these filters.</td></tr>`}
+ </tbody></table></div>`;
+ const q=$('#pq');q.oninput=()=>{pf.q=q.value;const p=q.selectionStart;prioView(v,m);const n=$('#pq');n.focus();n.setSelectionRange(p,p);};
+ $('#pc').onchange=e=>{pf.country=e.target.value;prioView(v,m);};
+ $('#pp').onchange=e=>{pf.priority=e.target.value;prioView(v,m);};
+ $('#pt').onchange=e=>{pf.type=e.target.value;prioView(v,m);};
+ $('#ps').onchange=e=>{pf.status=e.target.value;prioView(v,m);};
+ $('#pstale').onchange=e=>{pf.stale=e.target.checked;prioView(v,m);};
+ const a=$('#padd');if(a)a.onclick=()=>editPartner(null);
+ const dly=$('#daily');if(dly)dly.onclick=dailyUpdate;
+ $('#xls').onclick=downloadXlsx;
+ v.querySelectorAll('[data-addtask]').forEach(b=>b.onclick=e=>{e.stopPropagation();addTask(b.dataset.addtask);});
+ v.querySelectorAll('[data-editp]').forEach(b=>b.onclick=e=>{e.stopPropagation();editPartner(b.dataset.editp);});
+ v.querySelectorAll('tr[data-task]').forEach(r=>r.onclick=e=>{if(e.target.closest('.pc'))return;openTask(r.dataset.task);});
+}
+function findTask(id){for(const d of S.prio){const p=d.data();const t=p.tasks.find(x=>x.id===id);if(t)return {p,t};}return {};}
+const closeM=el=>{el.remove();modalOpen=false;render();};
+function taskLines(){return `<div id="tl"></div><button class="btn sm" id="tladd" type="button" style="margin-top:6px">+ Add another task</button>`;}
+function bindTaskLines(el){
+ const box=el.querySelector('#tl');
+ const add=()=>{box.insertAdjacentHTML('beforeend',`<div class="fg tline" style="margin-bottom:8px;grid-template-columns:3fr 1fr auto"><label class="f">Task<input data-tk="task" placeholder="e.g. Finalise first PO for Heparin"></label><label class="f">TCD<input type="date" data-tk="tcd"></label><button class="btn sm d" type="button" style="align-self:end" data-rm>✕</button></div>`);};
+ box.addEventListener('click',e=>{if(e.target.matches('[data-rm]'))e.target.closest('.tline').remove();});
+ el.querySelector('#tladd').onclick=add;add();
+ return ()=>[...box.querySelectorAll('.tline')].map(r=>({task:r.querySelector('[data-tk=task]').value.trim(),tcd:r.querySelector('[data-tk=tcd]').value})).filter(x=>x.task);
+}
+function editPartner(id){
+ const p=id?S.prio.find(d=>d.id===id)?.data():null;
+ const d=p||{priority:'H',type:'Distributor'};
+ const {el,close}=modal(`<h3>${p?'Edit '+esc(p.partner):'Add distributor / RA'}</h3>
+ <div class="fg">
+  <label class="f">Country<select data-f="country"><option value="">Select country…</option>${countryOptions(d.country,true)}</select></label>
+  <label class="f">Region<input data-f="region" value="${esc(d.region||regionOf(d.country))}" readonly style="background:#f4f6f9"></label>
+  <label class="f">Priority<select data-f="priority">${['VH','H','M'].map(x=>`<option ${d.priority===x?'selected':''}>${x}</option>`).join('')}</select></label>
+  <label class="f">Distributor or RA<select data-f="type">${['Distributor','RA'].map(x=>`<option ${d.type===x?'selected':''}>${x}</option>`).join('')}</select></label>
+  <label class="f w3" style="grid-column:span 3">Distributor / RA name<input data-f="partner" value="${esc(d.partner)}"></label>
+  <label class="f">Business value (USD Lac)<input data-f="value" value="${esc(d.value)}"></label>
+ </div>
+ ${p?'':`<div class="sec"><h4>Tasks</h4>${taskLines()}</div>`}
+ <div class="row" style="margin-top:16px">${p&&me().role==='Admin'?`<button class="btn d" id="pdel">Delete distributor & all its tasks</button>`:''}<span class="sp"></span><button class="btn" id="cx">Cancel</button><button class="btn p" id="psv">Save</button></div>`);
+ el.querySelector('#cx').onclick=close;
+ const cSel=el.querySelector('[data-f=country]');cSel.onchange=()=>{el.querySelector('[data-f=region]').value=regionOf(cSel.value);};
+ const getTasks=p?null:bindTaskLines(el);
+ const dl=el.querySelector('#pdel');if(dl)dl.onclick=async()=>{if(dl.dataset.sure){if(await safe(api('DELETE','/api/priority/'+id),'Deleted'))closeM(el);}else{dl.dataset.sure=1;dl.textContent='Click again – this deletes all tasks and history';}};
+ el.querySelector('#psv').onclick=async()=>{
+  const o={};el.querySelectorAll('[data-f]').forEach(i=>o[i.dataset.f]=i.value.trim());
+  if(!o.country||!o.partner){toast('Country and name are required',true);return;}
+  if(getTasks)o.tasks=getTasks();
+  if(await safe(id?api('PUT','/api/priority/'+id,o):api('POST','/api/priority',o),'Saved'))closeM(el);
+ };
+}
+function addTask(pid){
+ const p=S.prio.find(d=>d.id===pid)?.data();if(!p)return;
+ const {el,close}=modal(`<h3>Add task – ${esc(p.partner)} <span class="muted" style="font-weight:400">(${esc(p.country)})</span></h3>${taskLines()}
+ <div class="row" style="margin-top:16px"><span class="sp"></span><button class="btn" id="cx">Cancel</button><button class="btn p" id="sv">Save</button></div>`);
+ el.querySelector('#cx').onclick=close;const get=bindTaskLines(el);
+ el.querySelector('#sv').onclick=async()=>{const ts=get();if(!ts.length){toast('Enter at least one task',true);return;}
+  try{for(const t of ts)await api('POST',`/api/priority/${pid}/tasks`,t);toast('Task added');await refresh();closeM(el);}catch(e){toast(e.message,true);}};
+}
+function openTask(id){
+ const {p,t}=findTask(id);if(!t)return;
+ const can=canWrite(p.region);
+ const ups=(t.updates||[]).slice().reverse();
+ const {el,close}=modal(`<h3>${esc(p.partner)} <span class="muted" style="font-weight:400">· ${esc(p.country)} · ${esc(p.type)}</span></h3>
+ <div class="fg">
+  <label class="f w4">Task<textarea data-f="task" style="min-height:56px" ${can?'':'disabled'}>${esc(t.task)}</textarea></label>
+  <label class="f">Current TCD<input type="date" data-f="tcd" value="${esc(t.tcd)}" ${can?'':'disabled'}></label>
+  <label class="f w2">Reason for TCD change <span class="muted" style="font-weight:400">(if you change it)</span><input data-f="tcdReason" placeholder="e.g. MOH query, documents awaited" ${can?'':'disabled'}></label>
+  <label class="f">Status<select data-f="status" ${can?'':'disabled'}>${['Open','On hold','Done'].map(x=>`<option ${t.status===x?'selected':''}>${x}</option>`).join('')}</select></label>
+  ${can?`<label class="f w4" style="background:#f3fafa;padding:12px;border-radius:8px;border:1px dashed var(--teal)">Today's update (${fmtD(today())})<textarea data-f="update" style="min-height:80px" placeholder="What happened today? e.g. Last email 14-Nov, PO expected next week…"></textarea></label>`:''}
+ </div>
+ ${(t.tcdHistory||[]).length?`<div class="sec"><h4>TCD history</h4><table class="small" style="width:auto">${t.tcdHistory.slice().reverse().map(h=>`<tr><td style="padding:3px 14px 3px 0"><s>${fmtD(h.tcd)}</s></td><td class="muted" style="padding:3px 14px 3px 0">changed on ${fmtD(h.changedOn)} by ${esc(h.by)}</td><td>${esc(h.reason)}</td></tr>`).join('')}</table></div>`:''}
+ <div class="sec"><h4>Update history (${ups.filter(u=>!u.system).length})</h4>
+  <div style="max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px">${ups.map(u=>`<div style="padding:8px 0;border-bottom:1px solid #f0f2f5"><b class="small">${fmtD(u.on)}</b> <span class="muted small">· ${esc(u.by)}</span><div class="${u.system?'muted small':''}" style="white-space:pre-line">${esc(u.text)}</div></div>`).join('')||'<div class="muted small" style="padding:8px 0">No updates yet.</div>'}</div></div>
+ <div class="row" style="margin-top:16px">${can&&me().role==='Admin'?`<button class="btn d" id="tdel">Delete task</button>`:''}<span class="sp"></span><button class="btn" id="cx">${can?'Cancel':'Close'}</button>${can?`<button class="btn p" id="tsv">Save</button>`:''}</div>`,true);
+ el.querySelector('#cx').onclick=close;
+ const dl=el.querySelector('#tdel');if(dl)dl.onclick=async()=>{if(dl.dataset.sure){if(await safe(api('DELETE','/api/tasks/'+id),'Task deleted'))closeM(el);}else{dl.dataset.sure=1;dl.textContent='Click again to delete';}};
+ const sv=el.querySelector('#tsv');if(sv)sv.onclick=async()=>{
+  const o={};el.querySelectorAll('[data-f]').forEach(i=>o[i.dataset.f]=i.value.trim());
+  if(o.tcd!==t.tcd&&t.tcd&&!o.tcdReason){if(!sv.dataset.warn){sv.dataset.warn=1;toast('Add a reason for changing the TCD (or click Save again to skip)',true);return;}}
+  if(await safe(api('PUT','/api/tasks/'+id,o),'Saved'))closeM(el);
+ };
+}
+function dailyUpdate(){
+ const ps=prioScope().filter(p=>canWrite(p.region)).map(p=>({...p,open:p.tasks.filter(t=>t.status!=='Done')})).filter(p=>p.open.length);
+ const n=ps.reduce((a,p)=>a+p.open.length,0);
+ const {el,close}=modal(`<div class="row"><h3 style="margin:0;flex:1">Today's update · ${fmtD(today())}</h3><span class="muted small">${n} open tasks · fill in only what changed today</span></div>
+ <div class="tbl" style="margin-top:12px;max-height:calc(100vh - 230px)"><table><thead><tr><th>Distributor / RA</th><th style="min-width:200px">Task</th><th>Latest update</th><th style="min-width:280px">Today's update</th><th>TCD</th><th>Done</th></tr></thead><tbody>
+ ${ps.map(p=>p.open.map((t,i)=>{const [l]=lastUpd(t);return `<tr data-id="${t.id}" data-tcd="${esc(t.tcd)}">
+  ${i===0?`<td rowspan="${p.open.length}" class="pc"><b>${esc(p.partner)}</b><div class="muted small">${esc(p.country)} · <span class="pr ${esc(p.priority)}">${esc(p.priority)}</span></div></td>`:''}
+  <td class="small">${esc(t.task)}${updToday(t)?'<div style="color:var(--ok)" class="small">✓ updated today</div>':''}</td>
+  <td class="small muted">${l?`<b>${fmtD(l.on)}</b><div class="clamp" style="-webkit-line-clamp:2;max-width:220px">${esc(l.text)}</div>`:'—'}</td>
+  <td><textarea data-u rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:inherit;resize:vertical" placeholder="Today's update"></textarea></td>
+  <td><input type="date" data-t value="${esc(t.tcd)}" style="padding:5px;border:1px solid var(--line);border-radius:6px"><input data-r placeholder="reason if changed" style="display:none;margin-top:4px;width:100%;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:12px"></td>
+  <td style="text-align:center"><input type="checkbox" data-d></td></tr>`;}).join('')).join('')}
+ </tbody></table></div>
+ <div class="row" style="margin-top:14px"><span class="muted small" id="dcount">0 tasks changed</span><span class="sp"></span><button class="btn" id="cx">Cancel</button><button class="btn p" id="dsv">Save today's update</button></div>`,true);
+ const rows=()=>[...el.querySelectorAll('tr[data-id]')];
+ const collect=()=>rows().map(r=>{const tcd=r.querySelector('[data-t]').value;return {id:r.dataset.id,update:r.querySelector('[data-u]').value.trim(),tcd:tcd!==r.dataset.tcd?tcd:undefined,tcdReason:r.querySelector('[data-r]').value.trim(),status:r.querySelector('[data-d]').checked?'Done':undefined};}).filter(x=>x.update||x.tcd||x.status);
+ el.addEventListener('input',e=>{const r=e.target.closest('tr[data-id]');if(r){const ch=r.querySelector('[data-t]').value!==r.dataset.tcd;r.querySelector('[data-r]').style.display=ch?'block':'none';}el.querySelector('#dcount').textContent=collect().length+' tasks changed';});
+ el.addEventListener('change',()=>el.querySelector('#dcount').textContent=collect().length+' tasks changed');
+ el.querySelector('#cx').onclick=close;
+ el.querySelector('#dsv').onclick=async()=>{const items=collect();if(!items.length){toast('Nothing to save – type at least one update',true);return;}
+  try{const r=await api('POST','/api/tasks/daily',{items});toast(`Saved ${r.saved} task update${r.saved===1?'':'s'}`);await refresh();closeM(el);}catch(e){toast(e.message,true);}};
+}
+async function downloadXlsx(){
+ const reg=S.region==='ALL'?'ALL':S.region;
+ try{toast('Preparing Excel…');const r=await fetch('/api/priority/export.xlsx?region='+encodeURIComponent(reg),{credentials:'same-origin'});
+  if(!r.ok){let m='Could not create the Excel file';try{m=(await r.json()).error||m;}catch(e){}throw new Error(m);}
+  const cd=r.headers.get('Content-Disposition')||'';const nm=(/filename="([^"]+)"/.exec(cd)||[])[1]||'Priority_Sheet.xlsx';
+  saveBlob(await r.blob(),nm);}catch(e){toast(e.message,true);}
+}
+
+/* ---------- price approval ---------- */
+function priceView(v){
+ v.innerHTML=`<div class="card coming"><div class="big">💲</div><h2 style="font-size:18px">Price Approval</h2>
+ <p class="muted">This program is reserved in the portal with the same region-wise access. The request form, approval levels and price list fields will be added once the Price Approval format is shared.</p>
+ <p class="small muted">Planned: price request by country & partner → margin check → regional head review → VP approval, with full trail.</p></div>`;
+}
+
+/* ---------- login IDs (super-admin) ---------- */
+function showCreds(items,title){
+ const text=items.map(i=>`${i.region||'All regions (Admin)'}\tLogin ID: ${i.loginId}\tPassword: ${i.password}`).join('\n');
+ const {el,close}=modal(`<h3>${esc(title)}</h3>
+ <div class="banner">Copy these now and share each region's ID & password only with that region. Passwords are stored encrypted and cannot be shown again (you can reset them anytime).</div>
+ <div class="tbl"><table><thead><tr><th>Region</th><th>Login ID</th><th>Password</th></tr></thead><tbody>${items.map(i=>`<tr><td>${esc(i.region||'All regions (Admin)')}</td><td><b>${esc(i.loginId)}</b></td><td style="font-family:monospace;font-size:14px">${esc(i.password)}</td></tr>`).join('')}</tbody></table></div>
+ <div class="row" style="margin-top:14px"><span class="sp"></span><button class="btn" id="cp">Copy all</button><button class="btn p" id="ok">Done</button></div>`);
+ el.querySelector('#ok').onclick=close;
+ el.querySelector('#cp').onclick=async()=>{try{await navigator.clipboard.writeText(text);toast('Copied');}catch(e){toast('Select and copy the table instead',true);}};
+}
+async function accessView(v){
+ const regs=S.settings.regions||[];
+ v.innerHTML='<div class="muted">Loading…</div>';
+ let users=[];try{users=await api('GET','/api/users');}catch(e){v.innerHTML=`<div class="card empty">${esc(e.message)}</div>`;return;}
+ const missing=regs.filter(r=>!users.some(a=>a.role==='region'&&a.region===r));
+ const roleLbl={super:'<span class="chip" style="background:var(--navy);color:#fff">Super-admin – final approval</span>',admin:'<span class="chip teal">Admin – approves</span>',region:'Region user'};
+ v.innerHTML=`
+ <div class="banner">Each region signs in with its own <b>Login ID and password</b> and sees and fills only its own region's data. <b>Admin</b> IDs see all regions and approve requests. Only the <b>super-admin</b> manages Login IDs and records the CEO's final approval.</div>
+ <div class="card" style="margin-bottom:16px"><div class="row"><h2 style="margin:0;flex:1">Login IDs (${users.length})</h2>
+  ${missing.length?`<button class="btn p" id="genAll">Create IDs for ${missing.length} region${missing.length>1?'s':''} without one</button>`:''}
+  <button class="btn" id="addAcc">+ Add login ID</button></div>
+  <div class="tbl" style="margin-top:14px"><table><thead><tr><th>Login ID</th><th>Name / user</th><th>Role</th><th>Region</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>
+  ${users.map(a=>`<tr data-uid="${a.id}"><td><b>${esc(a.loginId)}</b></td><td>${esc(a.name)}</td><td>${roleLbl[a.role]||esc(a.role)}</td><td>${a.role==='region'?esc(a.region):'All regions'}</td><td>${a.active===false?'<span class="st Rejected">Disabled</span>':'<span class="st Approved">Active</span>'}</td><td class="small muted">${a.createdAt?fmtD(String(a.createdAt).slice(0,10)):''}</td>
+   <td style="white-space:nowrap">${a.role==='super'?'<span class="muted small">Use “Change password”</span>':`<button class="btn sm" data-reset>Reset password</button> <button class="btn sm" data-tog>${a.active===false?'Enable':'Disable'}</button> <button class="btn sm d" data-delacc>Delete</button>`}</td></tr>`).join('')}
+  </tbody></table></div></div>
+ <div class="card"><h2>Approval matrix</h2>
+  <table style="max-width:760px"><tr><td style="padding:6px 0;width:200px"><b>Approval Note</b></td><td>Raised by Region user → Approved / Returned / Rejected by Admin → printed → CEO signs on paper → Final approval recorded by Super-admin</td></tr>
+  <tr><td style="padding:6px 0"><b>Price Approval</b></td><td class="muted">Same matrix — will be enabled once the format is shared</td></tr>
+  <tr><td style="padding:6px 0"><b>Priority Sheet</b></td><td>Filled and updated by each Region user; Admin sees all regions</td></tr></table></div>`;
+ const g=$('#genAll');if(g)g.onclick=async()=>{g.disabled=true;try{const out=await api('POST','/api/users/generate');showCreds(out,'New region login IDs');}catch(e){toast(e.message,true);g.disabled=false;}};
+ $('#addAcc').onclick=()=>{
+  const {el,close}=modal(`<h3>Add login ID</h3><div class="fg">
+   <label class="f w2">Login ID<input id="aid" placeholder="e.g. IB-UPPERLATAM-2" style="text-transform:uppercase"></label>
+   <label class="f w2">Name / user<input id="anm" placeholder="e.g. Lekhpal – Upper LATAM"></label>
+   <label class="f w2">Role<select id="arl"><option value="region">Region user (raises & fills data)</option><option value="admin">Admin (all regions, approves)</option></select></label>
+   <label class="f w2">Region<select id="arg">${regs.map(r=>`<option>${esc(r)}</option>`).join('')}</select></label>
+   <label class="f w4">Password <span class="muted" style="font-weight:400">— leave blank to generate one (min 8 characters)</span><input id="apw" type="text"></label></div>
+   <div class="row" style="margin-top:16px"><span class="sp"></span><button class="btn" id="cx">Cancel</button><button class="btn p" id="sv">Create</button></div>`);
+  const rl=el.querySelector('#arl'),rg=el.querySelector('#arg');rl.onchange=()=>rg.disabled=rl.value==='admin';
+  el.querySelector('#cx').onclick=close;
+  el.querySelector('#sv').onclick=async()=>{
+   try{const out=await api('POST','/api/users',{loginId:el.querySelector('#aid').value,name:el.querySelector('#anm').value,role:rl.value,region:rg.value,password:el.querySelector('#apw').value});
+    el.remove();modalOpen=false;showCreds([out],'Login ID created');}catch(e){toast(e.message,true);}
+  };
+ };
+ v.querySelectorAll('tr[data-uid]').forEach(tr=>{
+  const id=tr.dataset.uid;const a=users.find(x=>String(x.id)===id);
+  const rs=tr.querySelector('[data-reset]');if(!rs)return;
+  rs.onclick=async()=>{try{const out=await api('POST',`/api/users/${id}/reset`);showCreds([out],'New password');}catch(e){toast(e.message,true);}};
+  tr.querySelector('[data-tog]').onclick=async()=>{if(await safe(api('PUT',`/api/users/${id}`,{active:a.active===false}),'Updated'))render();};
+  const d=tr.querySelector('[data-delacc]');d.onclick=async()=>{if(d.dataset.sure){if(await safe(api('DELETE',`/api/users/${id}`),'Login ID deleted'))render();}else{d.dataset.sure=1;d.textContent='Confirm delete';}};
+ });
+}
+function changePassword(){
+ const {el,close}=modal(`<h3>Change password</h3><div class="fg">
+  <label class="f w4">Current password<input type="password" id="cp0" autocomplete="current-password"></label>
+  <label class="f w2">New password (min 8)<input type="password" id="cp1" autocomplete="new-password"></label>
+  <label class="f w2">Repeat new password<input type="password" id="cp2" autocomplete="new-password"></label></div>
+  <div class="row" style="margin-top:16px"><span class="sp"></span><button class="btn" id="cx">Cancel</button><button class="btn p" id="sv">Change</button></div>`);
+ el.querySelector('#cx').onclick=close;
+ el.querySelector('#sv').onclick=async()=>{const a=el.querySelector('#cp1').value;if(a!==el.querySelector('#cp2').value){toast('New passwords do not match',true);return;}
+  if(await safe(api('POST','/api/me/password',{current:el.querySelector('#cp0').value,next:a}),'Password changed'))close();};
+}
+
+/* ---------- regions setup ---------- */
+function regionsView(v){
+ const regs=S.settings.regions||[];const cmap=S.settings.countries||{};const clsMap=S.settings.classes||{};
+ v.innerHTML=`<div class="grid g2">
+ <div class="card"><h2>Regions</h2><p class="muted small">Access is granted per region. Every record (note, priority row) belongs to one region.</p>
+  ${regs.map((r,i)=>`<div class="row" style="padding:6px 0"><b style="flex:1">${esc(r)}</b><span class="muted small">${Object.values(cmap).filter(x=>x===r).length} countries</span><button class="btn sm d" data-rr="${i}">Remove</button></div>`).join('')}
+  <div class="row" style="margin-top:10px"><input id="nr" placeholder="New region" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:8px"><button class="btn p" id="ar">Add</button></div></div>
+ <div class="card"><h2>Countries</h2><p class="muted small">${Object.keys(cmap).length} countries from the Region Master. Map each to its region and classification.</p>
+  <input id="cf" placeholder="Filter countries…" style="width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px">
+  <div style="max-height:460px;overflow:auto" id="clist">${Object.keys(cmap).sort((a,b)=>a.localeCompare(b)).map(c=>`<div class="row" data-cn="${esc(c.toLowerCase())}" style="padding:5px 0"><span style="flex:1">${esc(c)}</span><select data-cl="${esc(c)}" class="btn sm" style="font-weight:500" title="Classification">${['A','B','C','D','GA'].map(x=>`<option ${clsMap[c]===x?'selected':''}>${x}</option>`).join('')}</select><select data-cc="${esc(c)}" class="btn sm" style="font-weight:500">${regs.map(r=>`<option ${cmap[c]===r?'selected':''}>${esc(r)}</option>`).join('')}</select><button class="btn sm d" data-rc="${esc(c)}">✕</button></div>`).join('')}</div>
+  <div class="row" style="margin-top:10px"><input id="nc" placeholder="Country" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:8px"><select id="ncr" class="btn">${regs.map(r=>`<option>${esc(r)}</option>`).join('')}</select><select id="ncc" class="btn">${['A','B','C','D','GA'].map(x=>`<option>${x}</option>`).join('')}</select><button class="btn p" id="ac">Add</button></div></div></div>`;
+ const save=s=>safe(api('PUT','/api/settings',{regions:s.regions,countries:s.countries,classes:s.classes||clsMap}),'Saved');
+ $('#cf').oninput=e=>{const q=e.target.value.toLowerCase();v.querySelectorAll('[data-cn]').forEach(r=>r.style.display=r.dataset.cn.includes(q)?'':'none');};
+ v.querySelectorAll('[data-cl]').forEach(s=>s.onchange=()=>save({regions:regs,countries:cmap,classes:{...clsMap,[s.dataset.cl]:s.value}}));
+ $('#ar').onclick=()=>{const n=$('#nr').value.trim();if(!n||regs.includes(n))return;save({regions:[...regs,n],countries:cmap});};
+ v.querySelectorAll('[data-rr]').forEach(b=>b.onclick=()=>{const r=regs[+b.dataset.rr];if(Object.values(cmap).includes(r)){toast('Move its countries to another region first',true);return;}save({regions:regs.filter(x=>x!==r),countries:cmap});});
+ $('#ac').onclick=()=>{const c=$('#nc').value.trim();if(!c)return;save({regions:regs,countries:{...cmap,[c]:$('#ncr').value},classes:{...clsMap,[c]:$('#ncc').value}});};
+ v.querySelectorAll('[data-cc]').forEach(s=>s.onchange=()=>save({regions:regs,countries:{...cmap,[s.dataset.cc]:s.value}}));
+ v.querySelectorAll('[data-rc]').forEach(b=>b.onclick=()=>{const o={...cmap},k={...clsMap};delete o[b.dataset.rc];delete k[b.dataset.rc];save({regions:regs,countries:o,classes:k});});
+}
+
+/* ---------- boot ---------- */
+(async()=>{
+ try{S.user=await api('GET','/api/me');await loadAll();}catch(e){S.user=null;}
+ S.booted=true;route();
+})();
+</script>
+</body>
+</html>

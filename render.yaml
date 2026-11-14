@@ -1,0 +1,29 @@
+# Render Blueprint – creates the website and its database in one go.
+# Cost (Render, Nov 2026): Starter web service ~$7/month + Basic-256mb Postgres ~$6/month.
+# For a free 30-day trial change both plans to "free" (see README).
+services:
+  - type: web
+    name: aculife-ib
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm ci --omit=optional
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_LOGIN
+        value: ADMIN
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aculife-ib-db
+          property: connectionString
+databases:
+  - name: aculife-ib-db
+    plan: basic-256mb
+    region: singapore
+    databaseName: aculife_ib
+    user: aculife_ib
