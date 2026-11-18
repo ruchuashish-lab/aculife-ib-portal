@@ -82,6 +82,21 @@ table{width:100%;border-collapse:collapse}
 .ptbl tr.task td{border-bottom:1px solid #eef1f4}
 .ptbl tr.done td:not(.pc){opacity:.55}
 td.od{color:var(--bad);font-weight:600}
+.stbl td.num,.stbl th.num{text-align:right;white-space:nowrap}
+.stbl td{padding:7px 10px!important;font-size:13px}
+.stbl th{padding:9px 10px!important;white-space:normal!important;min-width:70px;vertical-align:bottom}
+.stbl tr.tot td{font-weight:700;background:#eef2f6;position:sticky;top:38px;z-index:1}
+.stbl td.hl{background:#f3fafa}.stbl tr.tot td.hl{background:#dff0f0}
+.stbl td:first-child,.stbl th:first-child{position:sticky;left:0;background:#fff;z-index:2;min-width:150px}
+.stbl th:first-child{background:#f0f3f7;z-index:3}.stbl tr.tot td:first-child{background:#eef2f6}
+.ms{position:relative}
+.ms-pop{position:absolute;top:34px;left:0;z-index:40;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:10px;width:300px}
+.ms-q{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px}
+.ms-list{max-height:280px;overflow:auto}
+.ms-list label{display:flex;gap:7px;align-items:flex-start;padding:4px 2px;font-size:12.5px;cursor:pointer;border-bottom:1px solid #f4f6f8}
+.mx{display:inline-block;min-width:20px;text-align:center;border-radius:4px;font-weight:700;font-size:11.5px;padding:1px 4px}
+.mx-R{background:#d5f5e3;color:#1e8449}.mx-M{background:#e8f1fb;color:#1f5f99}.mx-A{background:#fff4e0;color:#8a5a00}.mx-P{background:#eef0f3;color:#555}.mx-H{background:#fdeee0;color:#9c4f00}.mx-X{background:#fbe9e7;color:#a93226}.mx-o{color:#aaa}.mx-E{background:#f5b7b1;color:#922b21}.mx-U{background:#d6eaf8;color:#1a5276}
+.g4{grid-template-columns:repeat(4,1fr)}
 .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;line-height:1.45;max-width:420px}
 .small{font-size:12px}
 h2{font-size:15px;margin:0 0 12px}
@@ -150,8 +165,10 @@ label.f textarea{min-height:90px;resize:vertical;line-height:1.5}
 "use strict";
 const MODULES=[
  {id:'approval-notes',name:'Approval Note',ic:'📝',desc:'Raise, review and approve approval notes (claims, settlements, appointments) with a 3-level sign-off.'},
- {id:'priority-sheet',name:'Priority Sheet',ic:'🎯',desc:'Country-wise priority tracker for distributors and RA partners with status history.'},
- {id:'price-approval',name:'Price Approval',ic:'💲',desc:'Price approval requests and sign-off. Format to be configured.'}
+ {id:'priority-sheet',name:'Task Sheet',ic:'🎯',desc:'Country-wise task tracker for distributors and RA partners with TCD history and daily updates.'},
+ {id:'price-approval',name:'Price Approval',ic:'💲',desc:'Price approval requests and sign-off. Format to be configured.'},
+ {id:'sales-data',name:'Sales Data',ic:'📊',desc:'Combined International + Stericon sales analysis, region-wise – updated monthly.'},
+ {id:'prt-data',name:'PRT Data',ic:'🧾',desc:'Product Registration Tracker – registrations, renewals, expiries, MOH queries, region-wise.'}
 ];
 const DEFAULT_SETTINGS={regions:[],countries:{},classes:{}};
 const NOTE_FLOW={Draft:'Draft',Submitted:'Pending admin approval',Approved:'Approved – awaiting CEO sign-off',Final:'Finally approved (CEO)',Rejected:'Rejected',Returned:'Returned for changes'};
@@ -237,7 +254,7 @@ function bindLogin(){
 }
 
 /* ---------- routing ---------- */
-const ROUTES=['home','approval-notes','priority-sheet','price-approval','login-ids','regions-setup'];
+const ROUTES=['home','approval-notes','priority-sheet','price-approval','sales-data','prt-data','login-ids','regions-setup'];
 function route(){const h=(location.hash||'').slice(1);S.route=ROUTES.includes(h)?h:'home';render();}
 window.addEventListener('hashchange',route);
 
@@ -252,7 +269,7 @@ function render(){
  const allowed=r=>r==='home'||(m.modules.includes(r))||(r==='login-ids'&&m.manage)||(r==='regions-setup'&&m.manage);
  if(!allowed(S.route))S.route='home';
  const navMods=MODULES.filter(x=>m.modules.includes(x.id));
- const title={home:'Dashboard','approval-notes':'Approval Notes','priority-sheet':'Priority Sheet','price-approval':'Price Approval','login-ids':'Login IDs & Access','regions-setup':'Regions & Countries'}[S.route];
+ const title={home:'Dashboard','approval-notes':'Approval Notes','priority-sheet':'Task Sheet','price-approval':'Price Approval','sales-data':'Sales Data','prt-data':'PRT Data','login-ids':'Login IDs & Access','regions-setup':'Regions & Countries'}[S.route];
  root.innerHTML=`<div class="app">
  <aside>
   <div class="brand"><div class="mark"><div class="logo">IB</div><div><b>Aculife-IB</b><small>International Business Portal</small></div></div></div>
@@ -285,7 +302,7 @@ function render(){
  const cpw=$('#chpw');if(cpw)cpw.onclick=changePassword;
  const rs=$('#regionSel');if(rs){rs.value=S.region;rs.onchange=()=>{S.region=rs.value;render();};}
  const v=$('#view');
- ({home:homeView,'approval-notes':notesView,'priority-sheet':prioView,'price-approval':priceView,'login-ids':accessView,'regions-setup':regionsView}[S.route])(v,m);
+ ({home:homeView,'approval-notes':notesView,'priority-sheet':prioView,'price-approval':priceView,'sales-data':salesView,'prt-data':prtView,'login-ids':accessView,'regions-setup':regionsView}[S.route])(v,m);
 }
 
 /* ---------- home ---------- */
@@ -587,7 +604,7 @@ async function printNote(n){
  }catch(e){toast('Could not create the print copy. Please try again.',true);}
 }
 
-/* ---------- priority sheet (partners with task lines) ---------- */
+/* ---------- task sheet (formerly priority sheet: partners with task lines) ---------- */
 let pf={q:'',country:'',priority:'',type:'',status:'Open',stale:false};
 const lastUpd=t=>{const u=(t.updates||[]).filter(x=>!x.system);return [u[u.length-1],u[u.length-2]];};
 const updToday=t=>(t.updates||[]).some(u=>u.on===today()&&!u.system);
@@ -750,8 +767,213 @@ async function downloadXlsx(){
  const reg=S.region==='ALL'?'ALL':S.region;
  try{toast('Preparing Excel…');const r=await fetch('/api/priority/export.xlsx?region='+encodeURIComponent(reg),{credentials:'same-origin'});
   if(!r.ok){let m='Could not create the Excel file';try{m=(await r.json()).error||m;}catch(e){}throw new Error(m);}
-  const cd=r.headers.get('Content-Disposition')||'';const nm=(/filename="([^"]+)"/.exec(cd)||[])[1]||'Priority_Sheet.xlsx';
+  const cd=r.headers.get('Content-Disposition')||'';const nm=(/filename="([^"]+)"/.exec(cd)||[])[1]||'Task_Sheet.xlsx';
   saveBlob(await r.blob(),nm);}catch(e){toast(e.message,true);}
+}
+
+/* ---------- sales data ---------- */
+let SV={view:'dashboard',f:{},biz:'ALL',cur:'USD',upload:false,q:'',sort:null,dir:-1,meta:null,data:null,key:''};
+const F={
+ v:x=>x===null||x===undefined||x===''?'':typeof x==='number'?x.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}):esc(x),
+ g:x=>x==='New'?'<span class="chip teal">New</span>':typeof x==='number'?`<span style="color:${x>=0?'var(--ok)':'var(--bad)'}">${x>=0?'▲':'▼'} ${(Math.abs(x)*100).toFixed(1)}%</span>`:'',
+ p:x=>typeof x==='number'?(x*100).toFixed(1)+'%':'',
+ a:x=>typeof x==='number'?`<b style="color:${x>=1?'var(--ok)':x>=0.8?'#b9770e':x>=0.5?'#d68910':'var(--bad)'}">${(x*100).toFixed(1)}%</b>`:'',
+ s:x=>!x?'':`<span class="st ${/On \//.test(x)||/Growing|New/.test(x)?'Approved':/Close/.test(x)?'Submitted':/Behind|Declining/.test(x)?'Returned':/Critical|No billing/.test(x)?'Rejected':'Draft'}">${esc(x)}</span>`,
+ t:x=>esc(x)
+};
+const MNS=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+const upTo=P=>`${MNS[(P.ytdM||1)-1]} ${P.cur.slice(0,2)}${String(+P.cur.slice(2,4)+(P.ytdM>9?1:0)).padStart(2,'0')}`;
+async function salesView(v,m){
+ if(SV.who!==m.id){SV={view:'dashboard',f:{},biz:'ALL',cur:'USD',upload:false,q:'',sort:null,dir:-1,meta:null,data:null,key:'',who:m.id};}
+ if(!SV.meta){v.innerHTML='<div class="muted">Loading sales data…</div>';try{SV.meta=await api('GET','/api/sales/meta');}catch(e){if(v.isConnected)v.innerHTML=`<div class="card empty">${esc(e.message)}</div>`;return;}}
+ if(!v.isConnected)return;
+ const meta=SV.meta,P=meta.CMB;
+ if(!P&&meta.canUpload)SV.upload=true;
+ const views=meta.views.filter(([k])=>!(k==='mfg'&&m.role!=='Admin'));
+ const regLabel=S.region==='ALL'?(m.regions.length>1?'All regions':m.regions[0]):S.region;
+ v.innerHTML=`<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;margin-bottom:12px">
+  <div><b>${esc(regLabel)}</b>${P?`<div class="muted small">Data up to <b>${upTo(P)}</b> · YTD Apr–${MNS[P.ytdM-1]} · FY ${esc(P.y1)} to ${esc(P.cur)}</div>`:''}</div><span class="sp"></span>
+  ${P&&!SV.upload&&SV.view!=='dashboard'?`<div class="row" style="gap:4px"><span class="muted small">Business</span>${[['ALL','All'],['I','International'],['S','Stericon']].map(([k,l])=>`<button class="btn sm ${SV.biz===k?'n':''}" data-bz="${k}">${l}</button>`).join('')}</div>
+  <div class="row" style="gap:4px"><span class="muted small">Currency</span>${[['USD','USD Lacs'],['INR','INR Cr']].map(([k,l])=>`<button class="btn sm ${SV.cur===k?'n':''}" data-cu="${k}">${l}</button>`).join('')}</div>`:''}
+  ${P&&!SV.upload&&SV.view==='dashboard'?`<div class="row" style="gap:4px"><span class="muted small">Currency</span>${[['USD','USD Lacs'],['INR','INR Cr']].map(([k,l])=>`<button class="btn sm ${SV.cur===k?'n':''}" data-cu="${k}">${l}</button>`).join('')}</div>`:''}
+  ${P&&!SV.upload?`<button class="btn" id="sxls">⬇ Download Excel</button>`:''}
+  ${meta.canUpload?`<button class="btn ${SV.upload?'p':''}" id="supl">${SV.upload?'← Back to analysis':'⬆ Monthly upload'}</button>`:''}
+ </div><div id="sbody"></div>`;
+ v.querySelectorAll('[data-bz]').forEach(b=>b.onclick=()=>{SV.biz=b.dataset.bz;SV.data=null;salesView(v,m);});
+ v.querySelectorAll('[data-cu]').forEach(b=>b.onclick=()=>{SV.cur=b.dataset.cu;SV.data=null;salesView(v,m);});
+ const xb=$('#sxls');if(xb)xb.onclick=downloadSalesXlsx;
+ if(!meta.canUpload)SV.upload=false;
+ const ub=$('#supl');if(ub)ub.onclick=()=>{SV.upload=!SV.upload;if(!SV.upload&&!P)SV.upload=true;salesView(v,m);};
+ const body=$('#sbody');
+ if(SV.upload){salesUploadView(body,v,m);return;}
+ if(!P){body.innerHTML='<div class="card empty">No sales data has been uploaded yet. The admin will upload it shortly.</div>';return;}
+ if(!views.some(([k])=>k===SV.view))SV.view='dashboard';
+ body.innerHTML=`<div class="row" style="gap:4px;margin-bottom:12px;flex-wrap:wrap">${views.map(([k,l])=>`<button class="btn sm ${SV.view===k?'p':''}" data-sv="${k}">${l}</button>`).join('')}</div><div id="stbl"><div class="muted">Calculating…</div></div>`;
+ body.querySelectorAll('[data-sv]').forEach(b=>b.onclick=()=>{SV.view=b.dataset.sv;SV.sort=null;SV.q='';SV.data=null;salesView(v,m);});
+ const fq=SV.view==='dashboard'?JSON.stringify(SV.f):'{}';const bz=SV.view==='dashboard'?'ALL':SV.biz;
+ const key=[SV.view,bz,SV.cur,S.region,fq].join('|');
+ if(SV.key!==key||!SV.data){try{SV.data=await api('GET',`/api/sales/view?view=${SV.view}&biz=${bz}&cur=${SV.cur}&region=${encodeURIComponent(S.region)}&f=${encodeURIComponent(fq)}`);SV.key=key;}catch(e){const sb=$('#stbl');if(sb)sb.innerHTML=`<div class="card empty">${esc(e.message)}</div>`;return;}}
+ if(!v.isConnected||!$('#stbl'))return;
+ if(SV.data.dashboard){renderDashboard(v,m);return;}
+ renderSalesTable();
+}
+function renderSalesTable(){
+ const t=SV.data,box=$('#stbl');if(!box)return;
+ if(t.empty){box.innerHTML='<div class="card empty">No data for this selection.</div>';return;}
+ const head=`<div class="row" style="margin-bottom:10px"><b style="font-size:15px">${esc(t.title)}</b><span class="muted small">· ${esc(t.unit||'')}${SV.biz!=='ALL'?' · '+(SV.biz==='I'?'International':'Stericon')+' only':''}</span><span class="sp"></span>${t.rows&&t.rows.length>8?`<input type="search" id="sq" placeholder="Search…" value="${esc(SV.q)}" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;min-width:220px">`:''}</div>${t.note?`<div class="muted small" style="margin:-4px 0 10px">${esc(t.note)}</div>`:''}`;
+ if(t.cards){box.innerHTML=head+`<div class="grid g3">${t.cards.map(c=>`<div class="card kpi"><div class="l" style="margin:0 0 4px">${esc(c.l)}</div><div class="n" style="font-size:24px">${c.f==='a'?F.a(c.v):F[c.f](c.v)}</div><div class="small muted" style="margin-top:4px">${esc(c.s||'')}${c.sv==null?'':c.sf?F[c.sf](c.sv):''}</div></div>`).join('')}</div>`;return;}
+ let rows=t.rows.slice();
+ const qq=SV.q.toLowerCase();if(qq)rows=rows.filter(r=>t.cols.filter(c=>c.f==='t').some(c=>String(r[c.k]||'').toLowerCase().includes(qq)));
+ if(SV.sort){const k=SV.sort,d=SV.dir;rows.sort((a,b)=>{const x=a[k],y=b[k];if(typeof x==='number'||typeof y==='number')return ((typeof x==='number'?x:-1e18)-(typeof y==='number'?y:-1e18))*d;return String(x||'').localeCompare(String(y||''))*d;});}
+ const cell=(c,r)=>`<td class="${c.f==='t'?'':'num'} ${c.hl?'hl':''}">${F[c.f](r[c.k])}</td>`;
+ box.innerHTML=head+`<div class="tbl" style="max-height:calc(100vh - 320px)"><table class="stbl"><thead><tr>${t.cols.map(c=>`<th data-k="${c.k}" class="${c.f==='t'?'':'num'} ${c.hl?'hl':''}" style="cursor:pointer">${esc(c.l)}${SV.sort===c.k?(SV.dir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead>
+ <tbody>${t.total?`<tr class="tot">${t.cols.map(c=>cell(c,t.total)).join('')}</tr>`:''}${rows.map(r=>`<tr>${t.cols.map(c=>cell(c,r)).join('')}</tr>`).join('')||`<tr><td colspan="${t.cols.length}" class="empty">No rows.</td></tr>`}</tbody></table></div>
+ <div class="muted small" style="margin-top:6px">${rows.length} rows · click a column heading to sort</div>`;
+ box.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(SV.sort===k)SV.dir=-SV.dir;else{SV.sort=k;SV.dir=t.cols.find(c=>c.k===k).f==='t'?1:-1;}renderSalesTable();});
+ const sq=$('#sq');if(sq)sq.oninput=()=>{SV.q=sq.value;const p=sq.selectionStart;renderSalesTable();const n=$('#sq');n.focus();n.setSelectionRange(p,p);};
+}
+async function downloadSalesXlsx(){
+ try{toast('Preparing Excel…');const r=await fetch(`/api/sales/export.xlsx?region=${encodeURIComponent(S.region)}&biz=${SV.view==='dashboard'?'ALL':SV.biz}&cur=${SV.cur}&f=${encodeURIComponent(JSON.stringify(SV.f))}`,{credentials:'same-origin'});
+  if(!r.ok){let mm='Could not create the Excel file';try{mm=(await r.json()).error||mm;}catch(e){}throw new Error(mm);}
+  const cd=r.headers.get('Content-Disposition')||'';saveBlob(await r.blob(),(/filename="([^"]+)"/.exec(cd)||[])[1]||'Sales.xlsx');}catch(e){toast(e.message,true);}
+}
+function salesUploadView(box,v,m){
+ const x=SV.meta.CMB;
+ box.innerHTML=`<div class="grid g2"><div class="card"><h2>Combined International + Stericon file</h2>
+  ${x?`<div class="small" style="line-height:1.7">Loaded: <b>${esc(x.file||'')}</b><br>${x.rows.toLocaleString('en-IN')} rows · FY ${esc(x.y1)} to ${esc(x.cur)} · <b>up to ${upTo(x)} (${x.ytdM} months)</b><br><span class="muted">Uploaded ${x.uploadedAt?fmtT(x.uploadedAt):''} by ${esc(x.by||'')}</span></div>`:'<div class="muted small">Not uploaded yet.</div>'}
+  <p class="muted small">Upload the <b>Combined International + Stericon Dashboard</b> workbook. The portal reads only its <b>Data</b> sheet and replaces the previous month's data.</p>
+  <label class="btn p" style="cursor:pointer">⬆ Upload combined file (.xlsx)<input type="file" id="upc" accept=".xlsx" style="display:none"></label>
+  <div id="upres" class="small" style="margin-top:10px"></div></div>
+  <div class="card"><h2>Monthly update – 3 steps</h2><ol class="small" style="line-height:1.9;margin:0;padding-left:18px">
+  <li>Add the new month's rows to the <b>Data</b> sheet of the combined workbook (same columns: Business, FY, Month, MonthNo, Type, Region, Country / State, Customer, BDM, Mfg Unit, Channel, Zone, Product Group, SKU, Qty Lacs, USD Lacs, INR Cr) and save.</li>
+  <li>Upload it here. The latest month is detected automatically – no setting to change.</li>
+  <li>Every region's login shows its own updated cut immediately. Check the "up to" month shown here.</li></ol>
+  <p class="small muted" style="margin-bottom:0">Regions are matched by the Region column. Rows whose region is not a portal region (e.g. India (Domestic), Europe, Far East) are visible to Admins only, unless you create a login for that region.</p></div></div>`;
+ $('#upc').onchange=async()=>{const f=$('#upc').files[0];if(!f)return;const res=$('#upres');
+  res.innerHTML='<span class="muted">Uploading and reading the file… this can take up to a minute.</span>';
+  try{const r=await fetch('/api/sales/upload',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream','X-Requested-With':'aculife-ib','X-Filename':encodeURIComponent(f.name)},body:f});
+   let j=null;try{j=await r.json();}catch(e){}if(!r.ok)throw new Error((j&&j.error)||'Upload failed');
+   toast('Sales data updated');SV.meta=null;SV.data=null;SV.key='';SV.upload=false;salesView(v,m);}catch(e){res.innerHTML=`<span style="color:var(--bad)">${esc(e.message)}</span>`;}};
+}
+/* ---------- sales dashboard ---------- */
+F.n=x=>typeof x==='number'?String(x):'';F.x=x=>typeof x==='number'?x.toFixed(1)+'×':'';
+function tblHtml(t,maxH){
+ const cell=(c,r)=>`<td class="${c.f==='t'?'':'num'} ${c.hl?'hl':''}">${F[c.f](r[c.k])}</td>`;
+ return `<div class="tbl" style="${maxH?'max-height:'+maxH+'px':''}"><table class="stbl"><thead><tr>${t.cols.map(c=>`<th class="${c.f==='t'?'':'num'} ${c.hl?'hl':''}">${esc(c.l)}</th>`).join('')}</tr></thead>
+ <tbody>${t.total?`<tr class="tot">${t.cols.map(c=>cell(c,t.total)).join('')}</tr>`:''}${t.rows.map(r=>`<tr>${t.cols.map(c=>cell(c,r)).join('')}</tr>`).join('')||`<tr><td colspan="${t.cols.length}" class="empty">Nothing in this selection.</td></tr>`}</tbody></table></div>${t.note?`<div class="muted small" style="margin-top:4px">${esc(t.note)}</div>`:''}`;
+}
+function monthChart(t){
+ const rows=t.rows,W=760,H=220,pl=46,pb=26,pt=12,cw=(W-pl-10)/12;
+ const mx=Math.max(1,...rows.map(r=>Math.max(r.cy||0,r.bt||0,r.y3||0)));
+ const Y=v=>pt+(H-pt-pb)*(1-v/mx);
+ const ticks=[0,.25,.5,.75,1].map(f=>mx*f);
+ const line=(k,col,dash)=>`<polyline fill="none" stroke="${col}" stroke-width="2" ${dash?'stroke-dasharray="5 4"':''} points="${rows.map((r,i)=>`${pl+cw*i+cw/2},${Y(r[k]||0)}`).join(' ')}"/>`;
+ return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto">
+  ${ticks.map(v=>`<line x1="${pl}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eef1f4"/><text x="${pl-6}" y="${Y(v)+4}" font-size="10" text-anchor="end" fill="#8a96a3">${v.toFixed(v<10?1:0)}</text>`).join('')}
+  ${rows.map((r,i)=>`<rect x="${pl+cw*i+cw*.18}" y="${Y(r.cy||0)}" width="${cw*.64}" height="${H-pb-Y(r.cy||0)}" fill="#0f8b8d" rx="2"><title>${r.k0}: ${F.v(r.cy||0)}</title></rect><text x="${pl+cw*i+cw/2}" y="${H-8}" font-size="10.5" text-anchor="middle" fill="#5f6b7a">${r.k0}</text>`).join('')}
+  ${line('bt','#d68910',1)}${line('y3','#0b2a4a')}
+ </svg><div class="row small muted" style="gap:14px"><span><span style="display:inline-block;width:10px;height:10px;background:#0f8b8d;border-radius:2px"></span> Current FY actual</span><span><span style="display:inline-block;width:14px;border-top:2px dashed #d68910"></span> Basic target</span><span><span style="display:inline-block;width:14px;border-top:2px solid #0b2a4a"></span> Last FY</span></div>`;
+}
+function renderDashboard(v,m){
+ const d=SV.data,box=$('#stbl');if(!box)return;
+ const nsel=Object.values(SV.f).reduce((a,x)=>a+(x&&x.length?1:0),0);
+ box.innerHTML=`<div class="card" style="padding:12px 14px;margin-bottom:14px"><div class="row" style="gap:8px;flex-wrap:wrap">
+  <b class="small" style="margin-right:4px">Filters</b>${d.options.map(o=>`<div class="ms" data-k="${o.k}"><button class="btn sm ${o.sel.length?'p':''}" data-ms="${o.k}">${esc(o.l)}: ${o.sel.length?(o.sel.length===1?esc(o.sel[0].length>18?o.sel[0].slice(0,18)+'…':o.sel[0]):o.sel.length+' selected'):'All'} ▾</button></div>`).join('')}
+  ${nsel?`<button class="btn sm d" id="fclr">✕ Clear all</button>`:''}<span class="sp"></span><span class="muted small">${d.count.toLocaleString('en-IN')} rows in selection · ${esc(d.unit)}</span></div></div>
+ <h2>1. Headline KPIs</h2>${tblHtml(d.kpi)}
+ <h2 style="margin-top:20px">2. FY target gap</h2><div class="grid" style="grid-template-columns:repeat(5,1fr);gap:10px">${d.gap.map(g=>`<div class="card" style="padding:12px"><div class="muted small">${esc(g.l)}</div><div style="font-size:19px;font-weight:700;color:var(--navy);margin-top:3px">${g.f==='a'?F.a(g.v):F[g.f](g.v)}</div></div>`).join('')}</div>
+ <h2 style="margin-top:20px">3. Monthly trend vs target</h2><div class="card">${monthChart(d.monthly)}</div><div style="margin-top:10px">${tblHtml(d.monthly)}</div>
+ ${d.sections.map((s,i)=>`<h2 style="margin-top:22px">${i+4}. ${esc(s.title)}</h2>${tblHtml(s,420)}`).join('')}`;
+ box.querySelectorAll('[data-ms]').forEach(b=>b.onclick=e=>{e.stopPropagation();openMulti(b.dataset.ms,SV,()=>salesView(v,m));});
+ const fc=$('#fclr');if(fc)fc.onclick=()=>{SV.f={};SV.data=null;salesView(v,m);};
+}
+function openMulti(k,st,rerun){
+ document.querySelectorAll('.ms-pop').forEach(x=>x.remove());
+ const o=st.data.options.find(x=>x.k===k);if(!o)return;
+ const wrap=document.querySelector(`.ms[data-k="${k}"]`);const sel=new Set(o.sel);
+ const pop=document.createElement('div');pop.className='ms-pop';
+ pop.innerHTML=`<input type="search" placeholder="Search ${esc(o.l)}…" class="ms-q"><div class="ms-list"></div><div class="row" style="margin-top:8px"><button class="btn sm" data-a="none">Clear</button><span class="sp"></span><button class="btn sm" data-a="x">Cancel</button><button class="btn sm p" data-a="ok">Apply</button></div>`;
+ wrap.appendChild(pop);
+ const list=pop.querySelector('.ms-list'),q=pop.querySelector('.ms-q');
+ const draw=()=>{const qq=q.value.toLowerCase();const opts=o.opts.filter(x=>!qq||x.toLowerCase().includes(qq));
+  list.innerHTML=opts.slice(0,400).map(x=>`<label><input type="checkbox" value="${esc(x)}" ${sel.has(x)?'checked':''}> ${esc(x)}</label>`).join('')+(opts.length>400?`<div class="muted small">…${opts.length-400} more – type to search</div>`:'')+(!opts.length?'<div class="muted small">No match</div>':'');
+  list.querySelectorAll('input').forEach(i=>i.onchange=()=>{i.checked?sel.add(i.value):sel.delete(i.value);});};
+ q.oninput=draw;draw();q.focus();
+ pop.addEventListener('click',e=>e.stopPropagation());
+ const close=()=>{pop.remove();document.removeEventListener('click',close);};
+ setTimeout(()=>document.addEventListener('click',close),0);
+ pop.querySelector('[data-a=x]').onclick=close;
+ pop.querySelector('[data-a=none]').onclick=()=>{sel.clear();draw();};
+ pop.querySelector('[data-a=ok]').onclick=()=>{close();if(sel.size)st.f[k]=[...sel];else delete st.f[k];st.data=null;rerun();};
+}
+
+/* ---------- PRT – regulatory ---------- */
+let PV={view:'dashboard',f:{},q:'',meta:null,data:null,key:'',upload:false,who:null};
+F.d=x=>{if(!x)return '';const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(x);return m?`${m[3]}-${m[2]}-${m[1]}`:esc(x);};
+F.tl=x=>x?`<div class="clamp" style="max-width:360px;-webkit-line-clamp:2;font-size:12px">${esc(x)}</div>`:'';
+F.s2=x=>{const u=String(x||'').toUpperCase();const c=u==='APPROVED'||u==='UNDER RENEWAL'?'Approved':u==='MOH'?'Submitted':u==='WITH DISTRIBUTOR'?'L1':u==='PLAN'?'Draft':u==='ON HOLD'?'Returned':'Rejected';return x?`<span class="st ${c}">${esc(x)}</span>`:'';};
+F.c=x=>x?`<span class="mx mx-${x==='·'?'o':x}">${x}</span>`:'';
+const PRT_MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+async function prtView(v,m){
+ if(PV.who!==m.id){PV={view:'dashboard',f:{},q:'',meta:null,data:null,key:'',upload:false,who:m.id};}
+ if(!PV.meta){v.innerHTML='<div class="muted">Loading PRT data…</div>';try{PV.meta=await api('GET','/api/prt/meta');}catch(e){if(v.isConnected)v.innerHTML=`<div class="card empty">${esc(e.message)}</div>`;return;}}
+ if(!v.isConnected)return;
+ const meta=PV.meta,P=meta.PRT;if(!meta.canUpload)PV.upload=false;if(!P&&meta.canUpload)PV.upload=true;
+ const regLabel=S.region==='ALL'?(m.regions.length>1?'All regions':m.regions[0]):S.region;
+ v.innerHTML=`<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;margin-bottom:12px">
+  <div><b>${esc(regLabel)}</b>${P?`<div class="muted small">PRT regulatory · updated ${P.uploadedAt?fmtT(P.uploadedAt):''}</div>`:''}</div><span class="sp"></span>
+  ${P&&!PV.upload?`<button class="btn" id="pxls">⬇ Download Excel</button>`:''}
+  ${meta.canUpload?`<button class="btn ${PV.upload?'p':''}" id="pupl">${PV.upload?'← Back to analysis':'⬆ Monthly upload'}</button>`:''}
+ </div><div id="pbody"></div>`;
+ const xb=$('#pxls');if(xb)xb.onclick=async()=>{try{toast('Preparing Excel…');const r=await fetch(`/api/prt/export.xlsx?region=${encodeURIComponent(S.region)}&f=${encodeURIComponent(JSON.stringify(PV.f))}`,{credentials:'same-origin'});
+  if(!r.ok){let mm='Could not create the Excel file';try{mm=(await r.json()).error||mm;}catch(e){}throw new Error(mm);}const cd=r.headers.get('Content-Disposition')||'';saveBlob(await r.blob(),(/filename="([^"]+)"/.exec(cd)||[])[1]||'PRT.xlsx');}catch(e){toast(e.message,true);}};
+ const ub=$('#pupl');if(ub)ub.onclick=()=>{PV.upload=!PV.upload;if(!PV.upload&&!P)PV.upload=true;prtView(v,m);};
+ const body=$('#pbody');
+ if(PV.upload){prtUploadView(body,v,m);return;}
+ if(!P){body.innerHTML='<div class="card empty">No PRT data has been uploaded yet. The admin will upload it shortly.</div>';return;}
+ const views=meta.views;if(!views.some(([k])=>k===PV.view))PV.view='dashboard';
+ const nsel=Object.values(PV.f).reduce((a,x)=>a+(x&&x.length?1:0),0);
+ body.innerHTML=`<div class="row" style="gap:4px;margin-bottom:12px;flex-wrap:wrap">${views.map(([k,l])=>`<button class="btn sm ${PV.view===k?'p':''}" data-pv="${k}">${l}</button>`).join('')}</div>
+  ${PV.view!=='dashboard'&&nsel?`<div class="banner" style="padding:7px 12px">Dashboard filters are applied here too (${nsel}). <a href="#" id="pclr">Clear filters</a></div>`:''}<div id="ptbl"><div class="muted">Calculating…</div></div>`;
+ body.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{PV.view=b.dataset.pv;PV.data=null;PV.q='';prtView(v,m);});
+ const pc=$('#pclr');if(pc)pc.onclick=e=>{e.preventDefault();PV.f={};PV.data=null;prtView(v,m);};
+ const fq=JSON.stringify(PV.f);const key=[PV.view,S.region,fq,PV.q].join('|');
+ if(PV.key!==key||!PV.data){try{PV.data=await api('GET',`/api/prt/view?view=${PV.view}&region=${encodeURIComponent(S.region)}&f=${encodeURIComponent(fq)}&q=${encodeURIComponent(PV.q)}`);PV.key=key;}catch(e){const b=$('#ptbl');if(b)b.innerHTML=`<div class="card empty">${esc(e.message)}</div>`;return;}}
+ const box=$('#ptbl');if(!v.isConnected||!box)return;
+ const d=PV.data;if(d.empty){box.innerHTML='<div class="card empty">No data for this selection.</div>';return;}
+ if(d.dashboard){
+  box.innerHTML=`<div class="card" style="padding:12px 14px;margin-bottom:14px"><div class="row" style="gap:8px;flex-wrap:wrap">
+   <b class="small" style="margin-right:4px">Filters</b>${d.options.map(o=>`<div class="ms" data-k="${o.k}"><button class="btn sm ${o.sel.length?'p':''}" data-ms="${o.k}">${esc(o.l)}: ${o.sel.length?(o.sel.length===1?esc(o.sel[0].length>18?o.sel[0].slice(0,18)+'…':o.sel[0]):o.sel.length+' selected'):'All'} ▾</button></div>`).join('')}
+   ${nsel?`<button class="btn sm d" id="fclr">✕ Clear all</button>`:''}<span class="sp"></span><span class="muted small">${esc(d.unit)}</span></div></div>
+   <div class="grid g4" style="gap:10px">${d.cards.map(c=>`<div class="card" style="padding:14px"><div class="muted small">${esc(c.l)}</div><div style="font-size:22px;font-weight:700;color:var(--navy);margin-top:3px">${F[c.f](c.v)}</div><div class="small muted" style="margin-top:3px">${esc(c.s||'')}${c.sv==null?'':F[c.sf||'t'](c.sv)}</div></div>`).join('')}</div>
+   ${d.sections.map((s,i)=>`<h2 style="margin-top:22px">${i+1}. ${esc(s.title)}</h2>${tblHtml(s,440)}`).join('')}`;
+  box.querySelectorAll('[data-ms]').forEach(b=>b.onclick=e=>{e.stopPropagation();openMulti(b.dataset.ms,PV,()=>prtView(v,m));});
+  const fc=$('#fclr');if(fc)fc.onclick=()=>{PV.f={};PV.data=null;prtView(v,m);};
+  return;
+ }
+ box.innerHTML=`<div class="row" style="margin-bottom:10px"><b style="font-size:15px">${esc(d.title)}</b><span class="muted small">· ${esc(d.unit||'')}</span><span class="sp"></span>${d.serverSearch||d.rows.length>10?`<input type="search" id="pq" placeholder="Search…" value="${esc(PV.q)}" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;min-width:240px">`:''}</div>
+  ${d.note?`<div class="muted small" style="margin:-4px 0 10px">${esc(d.note)}</div>`:''}<div id="ptt">${tblHtml(PV.q&&!d.serverSearch?{...d,rows:d.rows.filter(r=>d.cols.filter(c=>c.f==='t').some(c=>String(r[c.k]||'').toLowerCase().includes(PV.q.toLowerCase())))}:d,560)}</div>
+  ${d.extra?`<h2 style="margin-top:22px">${esc(d.extra.title)}</h2>${tblHtml(d.extra,420)}`:''}`;
+ if(d.pre)box.insertAdjacentHTML('afterbegin',`<h2>${esc(d.pre.title)}</h2>${tblHtml(d.pre)}<div style="height:16px"></div>`);
+ const q=$('#pq');let tm;if(q)q.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>{PV.q=q.value;if(d.serverSearch){prtView(v,m).then(()=>{const n=$('#pq');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}});}else{const tt=$('#ptt');const qq=PV.q.toLowerCase();tt.innerHTML=tblHtml({...d,rows:d.rows.filter(r=>d.cols.filter(c=>c.f==='t').some(c=>String(r[c.k]||'').toLowerCase().includes(qq)))},560);}},d.serverSearch?350:150);};
+}
+function prtUploadView(box,v,m){
+ const x=PV.meta.PRT;
+ box.innerHTML=`<div class="grid g2"><div class="card"><h2>PRT file</h2>
+  ${x?`<div class="small" style="line-height:1.7">Loaded: <b>${esc(x.file||'')}</b><br>${x.registrations.toLocaleString('en-IN')} registrations · ${x.countries} countries · ${(x.products||0).toLocaleString('en-IN')} SKUs<br><span class="muted">Uploaded ${x.uploadedAt?fmtT(x.uploadedAt):''} by ${esc(x.by||'')}</span></div>`:'<div class="muted small">Not uploaded yet.</div>'}
+  <p class="muted small">Upload the <b>PRT_VS_BUSINESS</b> workbook. The portal reads its <b>PRT</b> sheet (plus <b>Products</b> for product / therapy and <b>PRT + BUSINESS</b> for the priority flag) and replaces the previous data.</p>
+  <label class="btn p" style="cursor:pointer">⬆ Upload PRT file (.xlsx)<input type="file" id="upp" accept=".xlsx" style="display:none"></label>
+  <div id="upr" class="small" style="margin-top:10px"></div></div>
+  <div class="card"><h2>Monthly update – 3 steps</h2><ol class="small" style="line-height:1.9;margin:0;padding-left:18px">
+  <li>Refresh the <b>PRT</b> sheet in your workbook from the tracker as you do today (same columns), and save.</li>
+  <li>Upload the workbook here. Each PRT ID is counted once; renewals, expiries and MOH ageing are worked out against today's date.</li>
+  <li>Every region's login shows its own updated PRT dashboard immediately.</li></ol>
+  <p class="small muted" style="margin-bottom:0">Region is taken from the <b>Country:Region</b> column (or the country's region in Regions & Countries).</p></div></div>`;
+ $('#upp').onchange=async()=>{const f=$('#upp').files[0];if(!f)return;const res=$('#upr');
+  res.innerHTML='<span class="muted">Uploading and reading the file… this can take up to a minute for a large file.</span>';
+  try{const r=await fetch('/api/prt/upload',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream','X-Requested-With':'aculife-ib','X-Filename':encodeURIComponent(f.name)},body:f});
+   let j=null;try{j=await r.json();}catch(e){}if(!r.ok)throw new Error((j&&j.error)||'Upload failed');
+   toast('PRT data updated');PV.meta=null;PV.data=null;PV.key='';PV.upload=false;prtView(v,m);}catch(e){res.innerHTML=`<span style="color:var(--bad)">${esc(e.message)}</span>`;}};
 }
 
 /* ---------- price approval ---------- */
@@ -789,7 +1011,7 @@ async function accessView(v){
  <div class="card"><h2>Approval matrix</h2>
   <table style="max-width:760px"><tr><td style="padding:6px 0;width:200px"><b>Approval Note</b></td><td>Raised by Region user → Approved / Returned / Rejected by Admin → printed → CEO signs on paper → Final approval recorded by Super-admin</td></tr>
   <tr><td style="padding:6px 0"><b>Price Approval</b></td><td class="muted">Same matrix — will be enabled once the format is shared</td></tr>
-  <tr><td style="padding:6px 0"><b>Priority Sheet</b></td><td>Filled and updated by each Region user; Admin sees all regions</td></tr></table></div>`;
+  <tr><td style="padding:6px 0"><b>Task Sheet</b></td><td>Filled and updated by each Region user; Admin sees all regions</td></tr></table></div>`;
  const g=$('#genAll');if(g)g.onclick=async()=>{g.disabled=true;try{const out=await api('POST','/api/users/generate');showCreds(out,'New region login IDs');}catch(e){toast(e.message,true);g.disabled=false;}};
  $('#addAcc').onclick=()=>{
   const {el,close}=modal(`<h3>Add login ID</h3><div class="fg">
@@ -829,7 +1051,7 @@ function changePassword(){
 function regionsView(v){
  const regs=S.settings.regions||[];const cmap=S.settings.countries||{};const clsMap=S.settings.classes||{};
  v.innerHTML=`<div class="grid g2">
- <div class="card"><h2>Regions</h2><p class="muted small">Access is granted per region. Every record (note, priority row) belongs to one region.</p>
+ <div class="card"><h2>Regions</h2><p class="muted small">Access is granted per region. Every record (note, task sheet row) belongs to one region.</p>
   ${regs.map((r,i)=>`<div class="row" style="padding:6px 0"><b style="flex:1">${esc(r)}</b><span class="muted small">${Object.values(cmap).filter(x=>x===r).length} countries</span><button class="btn sm d" data-rr="${i}">Remove</button></div>`).join('')}
   <div class="row" style="margin-top:10px"><input id="nr" placeholder="New region" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:8px"><button class="btn p" id="ar">Add</button></div></div>
  <div class="card"><h2>Countries</h2><p class="muted small">${Object.keys(cmap).length} countries from the Region Master. Map each to its region and classification.</p>

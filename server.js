@@ -67,6 +67,7 @@ async function migrate() {
   await q(`CREATE TABLE IF NOT EXISTS prio_tasks(
     id SERIAL PRIMARY KEY, partner_id INTEGER NOT NULL, region TEXT NOT NULL, sort INTEGER NOT NULL DEFAULT 0,
     data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await q(`CREATE TABLE IF NOT EXISTS sales_sets(src TEXT PRIMARY KEY, meta JSONB NOT NULL, data BYTEA NOT NULL, uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await q(`CREATE TABLE IF NOT EXISTS note_files(
     id SERIAL PRIMARY KEY, note_id INTEGER NOT NULL, filename TEXT NOT NULL, mime TEXT NOT NULL, size INTEGER NOT NULL,
     data BYTEA NOT NULL, uploaded_by TEXT, uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
@@ -118,7 +119,7 @@ async function seed() {
     let i = 0;
     for (const r of rows) { i++; await q('INSERT INTO priority(region,data,sort) VALUES($1,$2,$3)', [r.region, JSON.stringify(r), i]); }
     await q("INSERT INTO settings(key,value) VALUES('priority_seeded','true')");
-    console.log('Priority sheet loaded:', rows.length, 'rows.');
+    console.log('Task sheet loaded:', rows.length, 'rows.');
   }
   await upgradePriority();
 }
@@ -413,7 +414,7 @@ app.delete('/api/notes/:id/files/:fid', auth, wrap(async (req, res) => {
 }));
 
 /* ------------------------------------------------------------------ */
-/* Priority sheet: partners (distributor / RA) with task lines         */
+/* Task sheet (formerly Priority sheet): partners (distributor / RA) with task lines         */
 /* ------------------------------------------------------------------ */
 const PARTNER = ['country', 'priority', 'type', 'partner', 'value'];
 const istDate = (d = new Date()) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
@@ -600,10 +601,159 @@ app.get('/api/priority/export.xlsx', auth, wrap(async (req, res) => {
     ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
   }
   if (!regionList.length) wb.addWorksheet('No data').addRow(['No priority rows for this selection.']);
-  const name = `Aculife-IB_Priority_Sheet_${want && want !== 'ALL' ? want.replace(/\s+/g, '_') : 'All_Regions'}_${today}.xlsx`;
+  const name = `Aculife-IB_Task_Sheet_${want && want !== 'ALL' ? want.replace(/\s+/g, '_') : 'All_Regions'}_${today}.xlsx`;
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
   await wb.xlsx.write(res); res.end();
+}));
+
+/* ------------------------------------------------------------------ */
+/* Sales Data (International + Stericon micro-analysis files)          */
+/* ------------------------------------------------------------------ */
+function findFile(name) {
+  const walk = (dir, depth) => {
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return null; }
+    for (const e of entries) if (e.isFile() && e.name.toLowerCase() === name.toLowerCase()) return path.join(dir, e.name);
+    if (depth >= 3) return null;
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name === 'node_modules' || e.name.startsWith('.')) continue;
+      const hit = walk(path.join(dir, e.name), depth + 1); if (hit) return hit;
+    }
+    return null;
+  };
+  return walk(__dirname, 0);
+}
+const ENGINE_FILE = findFile('sales-engine.js');
+const SalesEngine = ENGINE_FILE ? require(ENGINE_FILE) : null;
+if (!SalesEngine) console.error('sales-engine.js not found – upload public/sales-engine.js to GitHub. Sales Data will be unavailable.');
+const zlib = require('zlib');
+const SALES = { CMB: null, PRT: null };
+// Share repeated text values (region, country, customer…) so large datasets use less memory.
+function intern(ds) {
+  const pool = new Map(); const I = s => { if (typeof s !== 'string' || s.length > 120) return s; let v = pool.get(s); if (v === undefined) { pool.set(s, s); v = s; } return v; };
+  for (const r of ds.rows) { if (Array.isArray(r)) { for (let i = 0; i < r.length; i++) if (typeof r[i] === 'string') r[i] = I(r[i]); } else for (const k in r) if (typeof r[k] === 'string') r[k] = I(r[k]); }
+  return ds;
+}
+async function loadSales() {
+  const r = (await q("SELECT data FROM sales_sets WHERE src='CMB'")).rows[0];
+  if (r) { try { SALES.CMB = intern(JSON.parse(zlib.gunzipSync(r.data).toString('utf8'))); console.log(`Sales data loaded: ${SALES.CMB.rows.length} rows, up to month ${SALES.CMB.meta.ytdM} of ${SALES.CMB.meta.cur}`); } catch (e) { console.error('Could not load sales data', e.message); } }
+}
+async function parseSalesUpload(buffer) {
+  const ExcelJS = require('exceljs'); const { Readable } = require('stream');
+  const p = SalesEngine.parser();
+  const reader = new ExcelJS.stream.xlsx.WorkbookReader(Readable.from(buffer), { sharedStrings: 'cache', hyperlinks: 'ignore', styles: 'ignore', worksheets: 'emit', entries: 'emit' });
+  for await (const ws of reader) {
+    let first = true, use = false;
+    for await (const row of ws) { const v = row.values.slice(1); if (first) { first = false; use = p.header(v); continue; } if (use) p.row(v); }
+    if (use) break;
+  }
+  return p.finish();
+}
+async function salesScope(req) {
+  return { admin: isAdmin(req.user), regions: await regionsFor(req.user), region: str(req.query.region, 80) || 'ALL' };
+}
+const salesOpt = req => {
+  let filters = {};
+  try { const f = JSON.parse(String(req.query.f || '{}').slice(0, 20000)); if (f && typeof f === 'object') for (const [k, v] of Object.entries(f)) if (Array.isArray(v)) filters[k] = v.slice(0, 500).map(x => String(x).slice(0, 200)); } catch (e) {}
+  return { biz: ['I', 'S'].includes(req.query.biz) ? req.query.biz : 'ALL', cur: req.query.cur === 'INR' ? 'INR' : 'USD', filters };
+};
+app.get('/api/sales/meta', auth, wrap(async (req, res) => {
+  if (!SalesEngine) return bad(res, 'Sales module files are missing on the server', 500);
+  res.json({ CMB: SALES.CMB ? SALES.CMB.meta : null, views: SalesEngine.VIEWS, canUpload: isAdmin(req.user) });
+}));
+app.get('/api/sales/view', auth, wrap(async (req, res) => {
+  if (!SalesEngine) return bad(res, 'Sales module files are missing on the server', 500);
+  const scope = await salesScope(req);
+  if (scope.region !== 'ALL' && !scope.regions.includes(scope.region)) return bad(res, 'Not allowed', 403);
+  res.json(SalesEngine.compute(SALES, await getSettings(), scope, str(req.query.view, 30) || 'dashboard', salesOpt(req)));
+}));
+app.get('/api/sales/export.xlsx', auth, wrap(async (req, res) => {
+  if (!SalesEngine) return bad(res, 'Sales module files are missing on the server', 500);
+  const scope = await salesScope(req);
+  if (scope.region !== 'ALL' && !scope.regions.includes(scope.region)) return bad(res, 'Not allowed', 403);
+  const ExcelJS = require('exceljs'); const opt = salesOpt(req);
+  const label = (scope.region !== 'ALL' ? scope.region : scope.admin ? 'All regions' : scope.regions.join(', ')) + (opt.biz === 'I' ? ' – International' : opt.biz === 'S' ? ' – Stericon' : '');
+  const wb = await SalesEngine.toXlsx(ExcelJS, SALES, await getSettings(), scope, label, opt);
+  const name = `Aculife-IB_Sales_${label.replace(/[^A-Za-z0-9]+/g, '_')}_${opt.cur}_${istDate()}.xlsx`;
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+  await wb.xlsx.write(res); res.end();
+}));
+app.post('/api/sales/upload', auth, express.raw({ type: () => true, limit: '80mb' }), wrap(async (req, res) => {
+  if (!SalesEngine) return bad(res, 'Sales module files are missing on the server', 500);
+  if (!isAdmin(req.user)) return bad(res, 'Only an admin can upload sales data', 403);
+  if (!Buffer.isBuffer(req.body) || req.body.length < 100 || req.body[0] !== 0x50 || req.body[1] !== 0x4b) return bad(res, 'Please upload the Excel (.xlsx) file');
+  let ds;
+  SALES.CMB = null; if (global.gc) global.gc(); // free the old month's data while the new file is read
+  try { ds = await parseSalesUpload(req.body); }
+  catch (e) { await loadSales(); return bad(res, e.message || 'Could not read this Excel file'); }
+  let fname = 'upload.xlsx'; try { fname = decodeURIComponent(req.get('X-Filename') || fname); } catch (e) {}
+  ds.meta.file = fname.slice(0, 150); ds.meta.uploadedAt = new Date().toISOString(); ds.meta.by = req.user.login_id;
+  const gz = zlib.gzipSync(Buffer.from(JSON.stringify(ds)));
+  await q("DELETE FROM sales_sets WHERE src IN ('CMB','INT','STE')");
+  await q("INSERT INTO sales_sets(src,meta,data) VALUES('CMB',$1,$2)", [JSON.stringify(ds.meta), gz]);
+  SALES.CMB = intern(ds);
+  req.body = null; if (global.gc) setTimeout(() => global.gc(), 50);
+  res.json({ ok: true, meta: ds.meta });
+}));
+
+/* PRT (Product Registration Tracker) – regulatory */
+const PRT_FILE = findFile('prt-engine.js');
+const PrtEngine = PRT_FILE ? require(PRT_FILE) : null;
+if (!PrtEngine) console.error('prt-engine.js not found – upload public/prt-engine.js to GitHub. PRT Data will be unavailable.');
+async function loadPrt() {
+  const r = (await q("SELECT data FROM sales_sets WHERE src='PRT'")).rows[0];
+  if (r) { try { SALES.PRT = intern(JSON.parse(zlib.gunzipSync(r.data).toString('utf8'))); console.log(`PRT data loaded: ${SALES.PRT.meta.registrations} registrations`); } catch (e) { console.error('Could not load PRT data', e.message); } }
+}
+async function parsePrtUpload(buffer) {
+  const ExcelJS = require('exceljs'); const { Readable } = require('stream');
+  const p = PrtEngine.parser();
+  const reader = new ExcelJS.stream.xlsx.WorkbookReader(Readable.from(buffer), { sharedStrings: 'cache', hyperlinks: 'ignore', styles: 'ignore', worksheets: 'emit', entries: 'emit' });
+  for await (const ws of reader) {
+    let first = true, use = false;
+    for await (const row of ws) { const v = row.values.slice(1); if (first) { first = false; use = p.header(v); continue; } if (use) p.row(v); }
+    if (p.done()) break;
+  }
+  return p.finish();
+}
+const prtOpt = req => ({ ...salesOpt(req), q: str(req.query.q, 100) });
+app.get('/api/prt/meta', auth, wrap(async (req, res) => {
+  if (!PrtEngine) return bad(res, 'PRT module files are missing on the server', 500);
+  res.json({ PRT: SALES.PRT ? SALES.PRT.meta : null, views: PrtEngine.VIEWS, canUpload: isAdmin(req.user) });
+}));
+app.get('/api/prt/view', auth, wrap(async (req, res) => {
+  if (!PrtEngine) return bad(res, 'PRT module files are missing on the server', 500);
+  const scope = await salesScope(req);
+  if (scope.region !== 'ALL' && !scope.regions.includes(scope.region)) return bad(res, 'Not allowed', 403);
+  res.json(PrtEngine.compute(SALES, await getSettings(), scope, str(req.query.view, 30) || 'dashboard', prtOpt(req)));
+}));
+app.get('/api/prt/export.xlsx', auth, wrap(async (req, res) => {
+  if (!PrtEngine) return bad(res, 'PRT module files are missing on the server', 500);
+  const scope = await salesScope(req);
+  if (scope.region !== 'ALL' && !scope.regions.includes(scope.region)) return bad(res, 'Not allowed', 403);
+  const ExcelJS = require('exceljs');
+  const label = scope.region !== 'ALL' ? scope.region : scope.admin ? 'All regions' : scope.regions.join(', ');
+  const wb = await PrtEngine.toXlsx(ExcelJS, SALES, await getSettings(), scope, label, prtOpt(req));
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="Aculife-IB_PRT_Regulatory_${label.replace(/[^A-Za-z0-9]+/g, '_')}_${istDate()}.xlsx"`);
+  await wb.xlsx.write(res); res.end();
+}));
+app.post('/api/prt/upload', auth, express.raw({ type: () => true, limit: '80mb' }), wrap(async (req, res) => {
+  if (!PrtEngine) return bad(res, 'PRT module files are missing on the server', 500);
+  if (!isAdmin(req.user)) return bad(res, 'Only an admin can upload PRT data', 403);
+  if (!Buffer.isBuffer(req.body) || req.body.length < 100 || req.body[0] !== 0x50 || req.body[1] !== 0x4b) return bad(res, 'Please upload the Excel (.xlsx) file');
+  let ds;
+  SALES.PRT = null; if (global.gc) global.gc();
+  try { ds = await parsePrtUpload(req.body); } catch (e) { await loadPrt(); return bad(res, e.message || 'Could not read this Excel file'); }
+  let fname = 'upload.xlsx'; try { fname = decodeURIComponent(req.get('X-Filename') || fname); } catch (e) {}
+  ds.meta.file = fname.slice(0, 150); ds.meta.uploadedAt = new Date().toISOString(); ds.meta.by = req.user.login_id;
+  const gz = zlib.gzipSync(Buffer.from(JSON.stringify(ds)));
+  await q("DELETE FROM sales_sets WHERE src='PRT'");
+  await q("INSERT INTO sales_sets(src,meta,data) VALUES('PRT',$1,$2)", [JSON.stringify(ds.meta), gz]);
+  SALES.PRT = intern(ds);
+  req.body = null; if (global.gc) setTimeout(() => global.gc(), 50);
+  res.json({ ok: true, meta: ds.meta });
 }));
 
 /* ------------------------------------------------------------------ */
@@ -720,5 +870,7 @@ app.use((err, req, res, next) => {
   if (!pool) pool = await connectPg();
   await migrate();
   await seed();
+  await loadSales();
+  await loadPrt();
   app.listen(PORT, () => console.log(`Aculife-IB Portal running on port ${PORT}`));
 })().catch(e => { console.error('Startup failed:', e); process.exit(1); });

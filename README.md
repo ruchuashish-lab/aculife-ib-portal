@@ -3,8 +3,12 @@
 The International Business portal, with three programs in one site:
 
 * **Approval Note**: a region raises the note, an Admin approves it, the note is printed, the CEO signs it on paper, the **signed scan is uploaded** (PDF/JPG/PNG), and the Super-admin records the final approval.
-* **Priority Sheet**: each distributor or RA has **several task lines**, and each task has its own **TCD**. When a TCD changes, the old date and the reason are kept. Regions post a **daily update** on each task, all on one screen with the **Today's update** button. Everyone can **download the sheet as Excel**: one sheet per region plus a summary showing who updated today and which TCDs are overdue.
+* **Task Sheet**: each distributor or RA has **several task lines**, and each task has its own **TCD**. When a TCD changes, the old date and the reason are kept. Regions post a **daily update** on each task, all on one screen with the **Today's update** button. Everyone can **download the sheet as Excel**: one sheet per region plus a summary showing who updated today and which TCDs are overdue.
 * **Price Approval**: reserved, and will be enabled when the format is shared.
+* **Sales Data**: the combined International + Stericon analysis, from the *Combined International + Stericon Dashboard* workbook (USD Lacs, with INR Cr as reference). It opens on a **Dashboard** (multi-select filters for Business, Region, Country/State, Customer, BDM, Mfg Unit, Channel and Zone; headline KPIs; FY target gap; monthly chart; countries; customers; BDM; product groups; SKUs; segment mix), plus Summary, Business, Region, Region × Business, Country/State, Customer, Product Group, SKU, BDM, Channel, Mfg Unit and Monthly. You can filter by business (All, International or Stericon) and switch currency between USD and INR, and download everything as Excel. Admins see all regions. Each region login sees only its own region's cut.
+  * **Monthly update:** add the new month's rows to the **Data** sheet of the combined workbook, then go to **Sales Data → Monthly upload** and upload the file. The latest month is detected automatically.
+* **PRT Data**: the Product Registration Tracker compared against the business plan, from the *PRT_VS_BUSINESS* workbook (sheet **PRT + BUSINESS**). It opens on a **Dashboard** with filters (Region, Country, Country Cat, Current Status, Priority, Therapy, Product Group, Mfg Unit, BDM, RA Resource, Year) covering registrations by status, expected business on registered products versus the pipeline, the pipeline by year, delay reasons, country, product, BDM, RA resource and renewals due. Other views: Country, Product group, Product, Region, BDM, RA resource, Pipeline, Delay reasons, Renewals, a **Registration matrix** (product × country) and a searchable **Registration list**. You can download everything as Excel. Each region sees only its own registrations.
+  * **Monthly update:** refresh the PRT + BUSINESS sheet, then go to **PRT Data → Monthly upload** and upload the workbook.
 
 Every region signs in with its **own Login ID and password** and can only see and change its **own region's** data. The server checks this, so a region cannot see another region's data even by changing the web address.
 
@@ -58,7 +62,7 @@ In Render open **aculife-ib → Settings → Custom Domains**, add for example `
 * **Change your own password:** **Change password** at the bottom left.
 * **Add a person to a region, or another approver:** **+ Add login ID**. Choose *Region user* or *Admin*.
 * **Regions and countries:** the **Regions & Countries** page. It was loaded from the Region Master sheet.
-* **Daily Priority Sheet discipline:** the Priority Sheet shows *“X / Y open tasks updated today”*. Tick **Not updated today** to see what is still pending. The Excel **Summary** sheet shows the same for every region.
+* **Daily Task Sheet discipline:** the Task Sheet shows *“X / Y open tasks updated today”*. Tick **Not updated today** to see what is still pending. The Excel **Summary** sheet shows the same for every region.
 * **Signed scans** are stored safely in the database. Only users who can see that region can open them.
 
 ## Roles
@@ -66,7 +70,7 @@ In Render open **aculife-ib → Settings → Custom Domains**, add for example `
 |---|---|---|
 | Super-admin (ADMIN) | All regions | Everything, plus manage Login IDs, regions and countries, and record the CEO's final approval |
 | Admin | All regions | Approve, return or reject notes; update any region's data |
-| Region user | Own region only | Raise approval notes; fill in and update the Priority Sheet |
+| Region user | Own region only | Raise approval notes; fill in and update the Task Sheet |
 
 ## Technical notes (for IT)
 * Node.js 18+, Express and PostgreSQL. The only required environment variable is `DATABASE_URL`. `ADMIN_LOGIN` and `ADMIN_PASSWORD` are used **only on first start**, to create the Super-admin.

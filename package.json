@@ -1,11 +1,11 @@
 {
   "name": "aculife-ib-portal",
   "version": "1.0.0",
-  "description": "Aculife-IB International Business Portal – Approval Note, Priority Sheet, Price Approval with region-wise logins",
+  "description": "Aculife-IB International Business Portal – Approval Note, Task Sheet, Price Approval, Sales Data, PRT Data with region-wise logins",
   "main": "server.js",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node --max-old-space-size=384 --expose-gc server.js"
   },
   "engines": {
     "node": ">=18"
