@@ -167,7 +167,9 @@ app.use(helmet({
       'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
       'img-src': ["'self'", 'data:', 'blob:'],
-      'connect-src': ["'self'"]
+      'connect-src': ["'self'"],
+      'manifest-src': ["'self'"],
+      'worker-src': ["'self'"]
     }
   },
   crossOriginEmbedderPolicy: false
@@ -834,6 +836,14 @@ app.delete('/api/users/:id', auth, superOnly, wrap(async (req, res) => {
 app.get('/healthz', (req, res) => res.send('ok'));
 app.get('/vendor/jspdf.js', (req, res) => res.sendFile(path.join(__dirname, 'node_modules/jspdf/dist/jspdf.umd.min.js')));
 app.get('/vendor/jspdf-autotable.js', (req, res) => res.sendFile(path.join(__dirname, 'node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.min.js')));
+// Phone / desktop app install files (manifest, service worker, icons) – found wherever they were uploaded.
+const APP_FILES = { '/manifest.webmanifest': 'application/manifest+json', '/sw.js': 'text/javascript', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png', '/icon-maskable-512.png': 'image/png', '/apple-touch-icon.png': 'image/png' };
+for (const [route, type] of Object.entries(APP_FILES)) {
+  const file = findFile(route.slice(1));
+  if (!file) { console.error(route.slice(1) + ' not found – upload it inside the public folder to enable "Install app".'); continue; }
+  app.get(route, (req, res) => { res.type(type); res.setHeader('Cache-Control', route === '/sw.js' || route === '/manifest.webmanifest' ? 'no-cache' : 'public, max-age=604800'); if (route === '/sw.js') res.setHeader('Service-Worker-Allowed', '/'); res.sendFile(file); });
+}
+app.get('/favicon.ico', (req, res) => { const f = findFile('icon-192.png'); if (!f) return res.status(404).end(); res.type('image/png'); res.sendFile(f); });
 // The web page: public/index.html, or wherever index.html was uploaded.
 function findPage() {
   const preferred = path.join(__dirname, 'public', 'index.html');
