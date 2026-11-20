@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aculife-IB Portal</title>
+<script src="/fieldwork-engine.js"></script>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0b2a4a">
 <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
@@ -177,7 +178,8 @@ const MODULES=[
  {id:'priority-sheet',name:'Task Sheet',ic:'🎯',desc:'Country-wise task tracker for distributors and RA partners with TCD history and daily updates.'},
  {id:'price-approval',name:'Price Approval',ic:'💲',desc:'Price approval requests and sign-off. Format to be configured.'},
  {id:'sales-data',name:'Sales Data',ic:'📊',desc:'Combined International + Stericon sales analysis, region-wise – updated monthly.'},
- {id:'prt-data',name:'PRT Data',ic:'🧾',desc:'Product Registration Tracker – registrations, renewals, expiries, MOH queries, region-wise.'}
+ {id:'prt-data',name:'PRT Data',ic:'🧾',desc:'Product Registration Tracker – registrations, renewals, expiries, MOH queries, region-wise.'},
+ {id:'field-work',name:'Field Work',ic:'🧭',desc:'Field visit & meeting log – who you met, discussion, action points and TCD, with Excel report.'}
 ];
 const DEFAULT_SETTINGS={regions:[],countries:{},classes:{}};
 const NOTE_FLOW={Draft:'Draft',Submitted:'Pending admin approval',Approved:'Approved – awaiting CEO sign-off',Final:'Finally approved (CEO)',Rejected:'Rejected',Returned:'Returned for changes'};
@@ -205,6 +207,7 @@ const ALLMODS=()=>MODULES.map(m=>m.id);
 function me(){
  const u=S.user;if(!u)return null;
  const admin=u.role==='admin'||u.role==='super';
+ if(u.role==='stericon')return {id:u.loginId,label:u.name||u.loginId,role:'Stericon',regions:u.regions||[],modules:['approval-notes','priority-sheet','sales-data'],manage:false,steri:true};
  return {id:u.loginId,label:u.name||u.loginId,role:admin?'Admin':'Region',regions:u.regions||[],modules:ALLMODS(),manage:u.role==='super'};
 }
 const canSeeRegion=r=>{const m=me();return !!m&&m.regions.includes(r);};
@@ -263,7 +266,7 @@ function bindLogin(){
 }
 
 /* ---------- routing ---------- */
-const ROUTES=['home','approval-notes','priority-sheet','price-approval','sales-data','prt-data','login-ids','regions-setup'];
+const ROUTES=['home','approval-notes','priority-sheet','price-approval','sales-data','prt-data','field-work','login-ids','regions-setup'];
 function route(){const h=(location.hash||'').slice(1);S.route=ROUTES.includes(h)?h:'home';render();}
 window.addEventListener('hashchange',route);
 
@@ -278,19 +281,19 @@ function render(){
  const allowed=r=>r==='home'||(m.modules.includes(r))||(r==='login-ids'&&m.manage)||(r==='regions-setup'&&m.manage);
  if(!allowed(S.route))S.route='home';
  const navMods=MODULES.filter(x=>m.modules.includes(x.id));
- const title={home:'Dashboard','approval-notes':'Approval Notes','priority-sheet':'Task Sheet','price-approval':'Price Approval','sales-data':'Sales Data','prt-data':'PRT Data','login-ids':'Login IDs & Access','regions-setup':'Regions & Countries'}[S.route];
+ const title={home:'Dashboard','approval-notes':'Approval Notes','priority-sheet':'Task Sheet','price-approval':'Price Approval','sales-data':'Sales Data','prt-data':'PRT Data','field-work':'Field Work','login-ids':'Login IDs & Access','regions-setup':'Regions & Countries'}[S.route];
  root.innerHTML=`<div class="app">
  <aside>
   <div class="brand"><div class="mark"><div class="logo">IB</div><div><b>Aculife-IB</b><small>International Business Portal</small></div></div></div>
   <nav>
-   <a href="#home" class="${S.route==='home'?'on':''}"><span class="ic">🏠</span>Dashboard ${(()=>{const c=S.notes.filter(d=>{const x=d.data();return (x.status==='Submitted'||(m.manage&&x.status==='Approved'))&&canSeeRegion(x.region);}).length;return c?`<span class="chip" style="margin-left:auto;background:#f39c12;color:#fff">${c}</span>`:''})()}</a>
+   ${`<a href="#home" class="${S.route==='home'?'on':''}"><span class="ic">🏠</span>Dashboard ${(()=>{const c=S.notes.filter(d=>{const x=d.data();return (x.status==='Submitted'||(m.manage&&x.status==='Approved'))&&canSeeRegion(x.region);}).length;return c?`<span class="chip" style="margin-left:auto;background:#f39c12;color:#fff">${c}</span>`:''})()}</a>`}
    <div class="sep">Programs</div>
    ${navMods.map(x=>`<a href="#${x.id}" class="${S.route===x.id?'on':''}"><span class="ic">${x.ic}</span>${x.name}</a>`).join('')}
    ${m.manage?`<div class="sep">Administration</div>
    <a href="#login-ids" class="${S.route==='login-ids'?'on':''}"><span class="ic">🔐</span>Login IDs & Access</a>
    <a href="#regions-setup" class="${S.route==='regions-setup'?'on':''}"><span class="ic">🌍</span>Regions & Countries</a>`:''}
   </nav>
-  <div class="who"><b>${esc(m.label)}</b><span class="small">${esc(m.id)}</span><br>${m.manage?'Super-admin':m.role==='Admin'?'Admin':'Region'} · ${m.role==='Admin'?'All regions':esc(m.regions[0]||'')}<div style="margin-top:8px"><button class="btn sm" id="chpw" style="background:transparent;color:#cfe0f1;border-color:rgba(255,255,255,.2)">Change password</button> <button class="btn sm" id="logout" style="background:transparent;color:#cfe0f1;border-color:rgba(255,255,255,.2)">Sign out</button></div></div>
+  <div class="who"><b>${esc(m.label)}</b><span class="small">${esc(m.id)}</span><br>${m.steri?'Stericon viewer':m.manage?'Super-admin':m.role==='Admin'?'Admin':'Region'} · ${m.role==='Admin'||m.steri?'All regions':esc(m.regions[0]||'')}<div style="margin-top:8px"><button class="btn sm" id="chpw" style="background:transparent;color:#cfe0f1;border-color:rgba(255,255,255,.2)">Change password</button> <button class="btn sm" id="logout" style="background:transparent;color:#cfe0f1;border-color:rgba(255,255,255,.2)">Sign out</button></div></div>
  </aside>
  <main>
   <div class="top"><h1>${title}</h1>
@@ -299,7 +302,7 @@ function render(){
     ${m.regions.length>1?`<option value="ALL">All my regions</option>`:''}
     ${m.regions.map(r=>`<option ${S.region===r?'selected':''}>${esc(r)}</option>`).join('')}
    </select>`}
-   ${m.role==='Region'?`<span class="chip teal">${esc(m.regions[0])}</span>`:`<span class="chip teal">Admin</span>`}
+   ${m.steri?`<span class="chip teal">Stericon – global</span>`:m.role==='Region'?`<span class="chip teal">${esc(m.regions[0])}</span>`:`<span class="chip teal">Admin</span>`}
   </div>
   <div class="content">
    <div id="view"></div>
@@ -311,7 +314,7 @@ function render(){
  const cpw=$('#chpw');if(cpw)cpw.onclick=changePassword;
  const rs=$('#regionSel');if(rs){rs.value=S.region;rs.onchange=()=>{S.region=rs.value;render();};}
  const v=$('#view');
- ({home:homeView,'approval-notes':notesView,'priority-sheet':prioView,'price-approval':priceView,'sales-data':salesView,'prt-data':prtView,'login-ids':accessView,'regions-setup':regionsView}[S.route])(v,m);
+ ({home:homeView,'approval-notes':notesView,'priority-sheet':prioView,'price-approval':priceView,'sales-data':salesView,'prt-data':prtView,'field-work':fwView,'login-ids':accessView,'regions-setup':regionsView}[S.route])(v,m);
 }
 
 /* ---------- home ---------- */
@@ -489,7 +492,7 @@ function openNote(id){
  const nxLabel='Approve';
  const finalable=n.status==='Approved'&&me().manage;
  const printable=['Approved','Final'].includes(n.status);
- const canUpload=printable&&me().role==='Admin';
+ const canUpload=printable;
  const {el,close}=modal(`
  <div class="row" style="margin-bottom:14px"><span class="st ${esc(n.status)}">${esc(NOTE_FLOW[n.status]||n.status)}</span><span class="chip">${esc(n.region)}</span><span class="sp"></span>
   ${printable?`<button class="btn sm n" id="pr">🖨 Print / Download PDF</button>`:''}
@@ -802,7 +805,7 @@ async function salesView(v,m){
  const regLabel=S.region==='ALL'?(m.regions.length>1?'All regions':m.regions[0]):S.region;
  v.innerHTML=`<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;margin-bottom:12px">
   <div><b>${esc(regLabel)}</b>${P?`<div class="muted small">Data up to <b>${upTo(P)}</b> · YTD Apr–${MNS[P.ytdM-1]} · FY ${esc(P.y1)} to ${esc(P.cur)}</div>`:''}</div><span class="sp"></span>
-  ${P&&!SV.upload&&SV.view!=='dashboard'?`<div class="row" style="gap:4px"><span class="muted small">Business</span>${[['ALL','All'],['I','International'],['S','Stericon']].map(([k,l])=>`<button class="btn sm ${SV.biz===k?'n':''}" data-bz="${k}">${l}</button>`).join('')}</div>
+  ${P&&!SV.upload&&SV.view!=='dashboard'&&!m.steri?`<div class="row" style="gap:4px"><span class="muted small">Business</span>${[['ALL','All'],['I','International'],['S','Stericon']].map(([k,l])=>`<button class="btn sm ${SV.biz===k?'n':''}" data-bz="${k}">${l}</button>`).join('')}</div>
   <div class="row" style="gap:4px"><span class="muted small">Currency</span>${[['USD','USD Lacs'],['INR','INR Cr']].map(([k,l])=>`<button class="btn sm ${SV.cur===k?'n':''}" data-cu="${k}">${l}</button>`).join('')}</div>`:''}
   ${P&&!SV.upload&&SV.view==='dashboard'?`<div class="row" style="gap:4px"><span class="muted small">Currency</span>${[['USD','USD Lacs'],['INR','INR Cr']].map(([k,l])=>`<button class="btn sm ${SV.cur===k?'n':''}" data-cu="${k}">${l}</button>`).join('')}</div>`:''}
   ${P&&!SV.upload?`<button class="btn" id="sxls">⬇ Download Excel</button>`:''}
@@ -986,6 +989,163 @@ function prtUploadView(box,v,m){
 }
 
 /* ---------- price approval ---------- */
+/* ---------- Field Work (field visit / meeting log) ---------- */
+let FW={rows:null,f:{},data:null,who:null,loading:false};
+const FWT=()=>window.FieldWork;
+async function fwLoad(){FW.loading=true;try{FW.rows=await api('GET','/api/fieldwork');}catch(e){toast(e.message,true);FW.rows=FW.rows||[];}FW.loading=false;}
+function fwView(v,m){
+ if(FW.who!==m.id){FW={rows:null,f:{},data:null,who:m.id,loading:false};}
+ if(!FWT()){v.innerHTML='<div class="card">Field Work could not load (fieldwork-engine.js missing). Please upload public/fieldwork-engine.js.</div>';return;}
+ if(!FW.rows){v.innerHTML='<div class="card muted">Loading field work…</div>';if(!FW.loading)fwLoad().then(()=>{if(v.isConnected)fwView(v,m);});return;}
+ const E=FWT();const admin=m.role==='Admin';const multi=m.regions.length>1;
+ const scoped=FW.rows.filter(r=>inScope(r.region));
+ const rows=E.sortRows(E.filter(scoped,FW.f));
+ FW.data={options:E.options(scoped,FW.f,multi)};
+ const sm=E.summary(rows);
+ const nsel=Object.entries(FW.f).filter(([k,x])=>Array.isArray(x)?x.length:!!x).length;
+ const canEdit=r=>admin||r.createdBy===m.id;
+ const card=(l,val,sub)=>`<div class="card" style="padding:12px 14px"><div class="muted small">${l}</div><div style="font-size:22px;font-weight:700;color:var(--navy);margin-top:2px">${val}</div>${sub?`<div class="muted small">${sub}</div>`:''}</div>`;
+ const cut=(t,n)=>{t=String(t||'');return t.length>n?esc(t.slice(0,n))+'…':esc(t);};
+ const tcdCell=r=>{if(!r.tcd)return '';const st=E.tcdStatus(r);return `<span style="${st==='TCD passed'?'color:var(--bad);font-weight:600':st==='TCD within 7 days'?'color:#b9770e;font-weight:600':''}">${fmtD(r.tcd)}</span>`;};
+ v.innerHTML=`
+ <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap">
+  <button class="btn p" id="fwNew">＋ New meeting</button>
+  <button class="btn" id="fwXls">⬇ Download Excel</button>
+  <button class="btn" id="fwMail">📋 Copy for email / Word</button>
+  <span class="sp"></span><span class="muted small">Entries are kept in the Field Work Report format. Excel downloads what is filtered below.${admin?' Meetings you enter as admin are 🔒 admin-only.':''}</span>
+ </div>
+ <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
+  ${card('Meetings',sm.meetings.toLocaleString('en-IN'))}${card('Field days',sm.days)}${card('Countries',sm.countries)}${card('Partners met',sm.partners)}
+  ${card('Action points – TCD passed',`<span style="color:${sm.overdue?'var(--bad)':'inherit'}">${sm.overdue}</span>`)}${card('TCD within 7 days',sm.due7)}
+ </div>
+ <div class="card" style="padding:12px 14px;margin-bottom:12px"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+  <b class="small" style="margin-right:2px">Filters</b>
+  <span class="small muted">Date</span><input type="date" id="fwFrom" class="btn sm" value="${esc(FW.f.from||'')}" style="padding:3px 6px"><span class="small muted">to</span><input type="date" id="fwTo" class="btn sm" value="${esc(FW.f.to||'')}" style="padding:3px 6px">
+  ${FW.data.options.map(o=>`<div class="ms" data-k="${o.k}"><button class="btn sm ${o.sel.length?'p':''}" data-ms="${o.k}">${esc(o.l)}: ${o.sel.length?(o.sel.length===1?esc(o.sel[0].length>18?o.sel[0].slice(0,18)+'…':o.sel[0]):o.sel.length+' selected'):'All'} ▾</button></div>`).join('')}
+  <input type="search" id="fwQ" class="btn sm" placeholder="Search text…" value="${esc(FW.f.q||'')}" style="min-width:160px;text-align:left">
+  ${nsel?`<button class="btn sm d" id="fwClr">✕ Clear all</button>`:''}
+  <span class="sp"></span><span class="muted small">${rows.length} of ${scoped.length} entries</span>
+ </div></div>
+ <div class="tbl" style="max-height:62vh"><table><thead><tr>
+  <th>Country</th><th>Date</th><th>Day</th><th>Meeting Count</th><th>Time</th><th>Partner/Distributor/RA/MOH/Hospital/Pharmacy</th><th>Meeting attendees</th><th>Meeting Objective</th><th>Discussion</th><th>Action Points</th><th>TCD</th>${multi?'<th>Region</th>':''}<th>Entered by</th><th></th>
+ </tr></thead><tbody>
+ ${rows.map(r=>`<tr class="click" data-fw="${esc(r.id)}">
+  <td><b>${esc(r.country)}</b>${r.adminOnly&&admin?'<div><span class="chip" style="font-size:10.5px;background:#fdebd0;color:#9a5b00" title="Entered by admin – not visible to region users">🔒 Admin only</span></div>':''}</td><td style="white-space:nowrap">${fmtD(r.date)}</td><td>${esc(E.dayOf(r.date))}</td><td style="text-align:center">${esc(r.meetingNo||'')}</td><td>${esc(r.time||'')}</td>
+  <td>${esc(r.partner||'')}${r.type?` <span class="chip" style="font-size:11px">${esc(r.type)}</span>`:''}</td><td>${cut(r.attendees,60)}</td><td>${cut(r.objective,80)}</td><td style="min-width:220px">${cut(r.discussion,140)}</td><td style="min-width:160px">${cut(r.actions,110)}</td>
+  <td style="white-space:nowrap">${tcdCell(r)}</td>${multi?`<td class="small">${esc(r.region)}</td>`:''}<td class="small">${esc(r.createdBy||'')}</td>
+  <td style="white-space:nowrap">${canEdit(r)?`<button class="btn sm" data-fwe="${esc(r.id)}">Edit</button>`:''}</td></tr>`).join('')}
+ ${!rows.length?`<tr><td colspan="${multi?14:13}" class="muted" style="text-align:center;padding:30px">${scoped.length?'No entries match the filters.':'No field work entered yet – click “New meeting” to add the first one.'}</td></tr>`:''}
+ </tbody></table></div>`;
+ const rerun=()=>fwView(v,m);
+ v.querySelectorAll('[data-ms]').forEach(b=>b.onclick=e=>{e.stopPropagation();openMulti(b.dataset.ms,FW,rerun);});
+ const setF=(k,val)=>{if(val)FW.f[k]=val;else delete FW.f[k];rerun();};
+ $('#fwFrom').onchange=e=>setF('from',e.target.value);$('#fwTo').onchange=e=>setF('to',e.target.value);
+ let qt;$('#fwQ').oninput=e=>{clearTimeout(qt);const val=e.target.value;qt=setTimeout(()=>{setF('q',val.trim());const q=$('#fwQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length);}},450);};
+ const c=$('#fwClr');if(c)c.onclick=()=>{FW.f={};rerun();};
+ $('#fwNew').onclick=()=>fwForm(null,m,v);
+ $('#fwXls').onclick=()=>fwDownload();
+ $('#fwMail').onclick=()=>fwEmail(rows,m);
+ v.querySelectorAll('[data-fwe]').forEach(b=>b.onclick=e=>{e.stopPropagation();fwForm(FW.rows.find(x=>x.id===b.dataset.fwe),m,v);});
+ v.querySelectorAll('[data-fw]').forEach(tr=>tr.onclick=()=>fwShow(FW.rows.find(x=>x.id===tr.dataset.fw),m,v));
+}
+async function fwDownload(){
+ const reg=S.region==='ALL'?'ALL':S.region;const f={...FW.f};
+ try{toast('Preparing Excel…');const r=await fetch('/api/fieldwork/export.xlsx?region='+encodeURIComponent(reg)+'&f='+encodeURIComponent(JSON.stringify(f)),{credentials:'same-origin'});
+  if(!r.ok){let mm='Could not create the Excel file';try{mm=(await r.json()).error||mm;}catch(e){}throw new Error(mm);}
+  const cd=r.headers.get('Content-Disposition')||'';saveBlob(await r.blob(),(/filename="([^"]+)"/.exec(cd)||[])[1]||'Field_Work.xlsx');}catch(e){toast(e.message,true);}
+}
+function fwShow(r,m,v){
+ if(!r)return;const E=FWT();const admin=m.role==='Admin';
+ const line=(l,t)=>`<div style="margin-bottom:10px"><div class="muted small">${l}</div><div style="white-space:pre-wrap">${esc(t||'—')}</div></div>`;
+ const {el,close}=modal(`<h2 style="margin-top:0">${esc(r.country)} · ${fmtD(r.date)} (${esc(E.dayOf(r.date))}) · Meeting ${esc(r.meetingNo||'')}</h2>
+  <div class="muted small" style="margin-bottom:12px">${esc(r.time||'')} · entered by ${esc(r.createdBy||'')}${r.region?' · '+esc(r.region):''}${r.adminOnly&&admin?' · 🔒 admin only':''}</div>
+  ${line('Partner/Distributor/RA/MOH/Hospital/Pharmacy',E.metWith(r))}${line('Meeting attendees',r.attendees)}${line('Meeting Objective',r.objective)}${line('Discussion',r.discussion)}${line('Action Points',r.actions)}${line('TCD',fmtD(r.tcd))}
+  <div class="row" style="margin-top:14px">${admin||r.createdBy===m.id?'<button class="btn" id="fwE">Edit</button>':''}<span class="sp"></span><button class="btn" id="fwC">Close</button></div>`,true);
+ el.querySelector('#fwC').onclick=close;const e=el.querySelector('#fwE');if(e)e.onclick=()=>{el.remove();modalOpen=false;fwForm(r,m,v);};
+}
+function fwForm(r,m,v,keep){
+ const E=FWT();const edit=!!r;const d=r||keep||{};
+ const nextNo=(country,date)=>{const n=(FW.rows||[]).filter(x=>x.date===date&&x.createdBy===m.id&&(!r||x.id!==r.id)).length;return n+1;};
+ const dt=d.date||today();
+ const {el,close}=modal(`<h2 style="margin-top:0">${edit?'Edit meeting':'New meeting'}</h2>${m.role==='Admin'&&(!edit||d.adminOnly)?'<p class="muted small" style="margin-top:-6px">🔒 Entered by admin – visible to admins only, not to region users.</p>':''}
+ <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px">
+  <label class="f" style="grid-column:span 2">Country *<select id="fCountry"><option value="">Select…</option>${countryOptions(d.country,true)}</select></label>
+  <label class="f">Date *<input type="date" id="fDate" value="${esc(dt)}"></label>
+  <label class="f">Day<input id="fDay" value="${esc(E.dayOf(dt))}" readonly style="background:#f4f6f9"></label>
+  <label class="f">Meeting Count<input type="number" min="1" max="99" id="fNo" value="${esc(edit?d.meetingNo:(keep?keep.meetingNo:nextNo(d.country,dt)))}"></label>
+  <label class="f">Time<input type="time" id="fTime" value="${esc(edit?d.time||'':'')}"></label>
+  <label class="f">Met with (type)<select id="fType"><option value="">Select…</option>${E.TYPES.map(t=>`<option ${t===(edit?d.type:'')?'selected':''}>${t}</option>`).join('')}</select></label>
+  <label class="f">Partner / organisation name<input id="fPartner" list="fwPartners" value="${esc(edit?d.partner||'':'')}" placeholder="e.g. ABC Pharma / MOH Kenya"><datalist id="fwPartners"></datalist></label>
+  <label class="f" style="grid-column:span 4">Meeting attendees<input id="fAtt" value="${esc(edit?d.attendees||'':'')}" placeholder="Names and designations"></label>
+  <label class="f" style="grid-column:span 4">Meeting Objective<textarea id="fObj" rows="2">${esc(edit?d.objective||'':'')}</textarea></label>
+  <label class="f" style="grid-column:span 4">Discussion<textarea id="fDisc" rows="5">${esc(edit?d.discussion||'':'')}</textarea></label>
+  <label class="f" style="grid-column:span 3">Action Points<textarea id="fAct" rows="3">${esc(edit?d.actions||'':'')}</textarea></label>
+  <label class="f">TCD<input type="date" id="fTcd" value="${esc(edit?d.tcd||'':'')}"></label>
+ </div>
+ <div class="row" style="margin-top:16px;gap:8px">${edit?'<button class="btn d" id="fDel">Delete</button>':''}<span class="sp"></span><button class="btn" id="fCx">Cancel</button>${edit?'':'<button class="btn" id="fSaveAdd">Save & add next meeting</button>'}<button class="btn p" id="fSave">Save</button></div>`,true);
+ const g=id=>el.querySelector('#'+id);
+ const fillPartners=()=>{const c=g('fCountry').value;const names=new Set();(S.prio||[]).forEach(p=>{const x=p.data();if(!c||x.country===c)names.add(x.partner);});(FW.rows||[]).forEach(x=>{if(x.partner&&(!c||x.country===c))names.add(x.partner);});g('fwPartners').innerHTML=[...names].filter(Boolean).sort().map(n=>`<option value="${esc(n)}">`).join('');};
+ fillPartners();g('fCountry').onchange=fillPartners;
+ g('fDate').onchange=()=>{g('fDay').value=E.dayOf(g('fDate').value);if(!edit)g('fNo').value=nextNo(g('fCountry').value,g('fDate').value);};
+ g('fCx').onclick=close;
+ const body=()=>({country:g('fCountry').value,date:g('fDate').value,meetingNo:g('fNo').value,time:g('fTime').value,type:g('fType').value,partner:g('fPartner').value,attendees:g('fAtt').value,objective:g('fObj').value,discussion:g('fDisc').value,actions:g('fAct').value,tcd:g('fTcd').value});
+ const save=async again=>{const b=body();if(!b.country||!b.date){toast('Select the country and date',true);return;}if(!b.partner&&!b.type){toast('Enter who you met',true);return;}
+  try{if(edit)await api('PUT','/api/fieldwork/'+r.id,b);else await api('POST','/api/fieldwork',b);toast(edit?'Meeting updated':'Meeting saved');await fwLoad();el.remove();modalOpen=false;
+   if(again)fwForm(null,m,v,{country:b.country,date:b.date,meetingNo:(+b.meetingNo||1)+1});else render();}catch(e){toast(e.message,true);}};
+ g('fSave').onclick=()=>save(false);const sa=g('fSaveAdd');if(sa)sa.onclick=()=>save(true);
+ const del=g('fDel');if(del)del.onclick=async()=>{if(!confirm('Delete this meeting entry? This cannot be undone.'))return;try{await api('DELETE','/api/fieldwork/'+r.id);toast('Deleted');await fwLoad();close();}catch(e){toast(e.message,true);}};
+}
+
+// Running report for email / Word: formatted table that pastes cleanly into Outlook, Gmail and Word.
+function fwReportHtml(rows,m){
+ const E=FWT();const multi=m.regions.length>1;
+ const asc=rows.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.country).localeCompare(String(b.country))||(a.meetingNo||0)-(b.meetingNo||0)||String(a.time).localeCompare(String(b.time)));
+ const scope=S.region!=='ALL'?S.region:multi?'All regions':(m.regions[0]||'');
+ const ft=E.filterText(FW.f,multi);
+ const dates=asc.map(r=>r.date).filter(Boolean);const period=dates.length?`${fmtD(dates[0])} to ${fmtD(dates[dates.length-1])}`:'';
+ const td='border:1px solid #9aa5b1;padding:5px 7px;vertical-align:top;font-family:Calibri,Arial,sans-serif;font-size:10pt;';
+ const th=td+'background:#0b2a4a;color:#ffffff;font-weight:bold;text-align:center;';
+ const nl=t=>esc(t||'').replace(/\n/g,'<br>');
+ const heads=['Country','Date','Day','Meeting Count','Time','Partner/Distributor/RA/MOH/Hospital/Pharmacy','Meeting attendees','Meeting Objective','Discussion','Action Points','TCD'];
+ if(multi)heads.push('Region','Entered by');
+ const sm=E.summary(asc);
+ return `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1b2430">
+ <p style="margin:0 0 4px 0;font-size:13pt;font-weight:bold;color:#0b2a4a">Field Work Report – ${esc(scope)}${period?' – '+esc(period):''}</p>
+ <p style="margin:0 0 8px 0;font-size:10pt;color:#555">${sm.meetings} meeting${sm.meetings===1?'':'s'} · ${sm.days} field day${sm.days===1?'':'s'} · ${sm.countries} countr${sm.countries===1?'y':'ies'} · ${sm.partners} partners met${ft?' · '+esc(ft):''}</p>
+ <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:1px solid #9aa5b1">
+ <thead><tr>${heads.map(h=>{const w={'Partner/Distributor/RA/MOH/Hospital/Pharmacy':170,'Meeting attendees':120,'Meeting Objective':150,'Discussion':280,'Action Points':190}[h];return `<th style="${th}${w?`min-width:${w}px;width:${w}px;`:''}"${w?` width="${w}"`:''}>${esc(h)}</th>`;}).join('')}</tr></thead>
+ <tbody>${asc.map((r,i)=>{const bg=i%2?'background:#f6f8fa;':'';const late=r.tcd&&E.tcdStatus(r)==='TCD passed';
+  return `<tr><td style="${td}${bg}"><b>${esc(r.country)}</b></td><td style="${td}${bg}white-space:nowrap">${fmtD(r.date)}</td><td style="${td}${bg}">${esc(E.dayOf(r.date))}</td><td style="${td}${bg}text-align:center">${esc(r.meetingNo||'')}</td><td style="${td}${bg}">${esc(r.time||'')}</td>
+  <td style="${td}${bg}">${esc(E.metWith(r))}</td><td style="${td}${bg}">${nl(r.attendees)}</td><td style="${td}${bg}">${nl(r.objective)}</td><td style="${td}${bg}">${nl(r.discussion)}</td><td style="${td}${bg}">${nl(r.actions)}</td>
+  <td style="${td}${bg}white-space:nowrap;${late?'color:#c0392b;font-weight:bold':''}">${fmtD(r.tcd)}</td>${multi?`<td style="${td}${bg}">${esc(r.region||'')}</td><td style="${td}${bg}">${esc(r.createdBy||'')}</td>`:''}</tr>`;}).join('')}</tbody></table>
+ </div>`;
+}
+function fwReportText(rows,m){
+ const E=FWT();const asc=rows.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||(a.meetingNo||0)-(b.meetingNo||0));
+ return asc.map(r=>[`${r.country} | ${fmtD(r.date)} (${E.dayOf(r.date)}) | Meeting ${r.meetingNo||''}${r.time?' | '+r.time:''}`,`Met with: ${E.metWith(r)}`,r.attendees?`Attendees: ${r.attendees}`:'',r.objective?`Objective: ${r.objective}`:'',r.discussion?`Discussion: ${r.discussion}`:'',r.actions?`Action points: ${r.actions}`:'',r.tcd?`TCD: ${fmtD(r.tcd)}`:''].filter(Boolean).join('\n')).join('\n\n');
+}
+function fwEmail(rows,m){
+ if(!rows.length){toast('No entries in the current filter',true);return;}
+ const html=fwReportHtml(rows,m);
+ const {el,close}=modal(`<h2 style="margin-top:0">Running report – copy for email / Word</h2>
+  <p class="muted small" style="margin-top:-4px">${rows.length} entr${rows.length===1?'y':'ies'} from the current filter. Click <b>Copy report</b>, then paste (Ctrl+V) into Outlook, Gmail or Word – the table keeps its format.</p>
+  <div id="fwRep" style="max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:#fff">${html}</div>
+  <div class="row" style="margin-top:14px;gap:8px"><button class="btn" id="fwDoc">⬇ Download Word file</button><span class="sp"></span><button class="btn" id="fwCx">Close</button><button class="btn p" id="fwCp">📋 Copy report</button></div>`,true);
+ el.querySelector('#fwCx').onclick=close;
+ el.querySelector('#fwCp').onclick=async()=>{
+  const txt=fwReportText(rows,m);let ok=false;
+  try{if(navigator.clipboard&&window.ClipboardItem){await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]);ok=true;}}catch(e){}
+  if(!ok){try{const box=el.querySelector('#fwRep');const rg=document.createRange();rg.selectNodeContents(box);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(rg);ok=document.execCommand('copy');sel.removeAllRanges();}catch(e){}}
+  toast(ok?'Report copied – paste it into your email or Word (Ctrl+V)':'Could not copy automatically – select the report and press Ctrl+C',!ok);
+ };
+ el.querySelector('#fwDoc').onclick=()=>{
+  const doc=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Field Work Report</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]--><style>@page Section1{size:841.9pt 595.3pt;mso-page-orientation:landscape;margin:36pt 36pt 36pt 36pt}div.Section1{page:Section1}</style></head><body><div class="Section1">${html}</div></body></html>`;
+  const scope=(S.region!=='ALL'?S.region:m.regions.length>1?'All_Regions':(m.regions[0]||'')).replace(/\s+/g,'_');
+  saveBlob(new Blob(['﻿'+doc],{type:'application/msword'}),`Aculife-IB_Field_Work_${scope}_${today()}.doc`);
+ };
+}
+
 function priceView(v){
  v.innerHTML=`<div class="card coming"><div class="big">💲</div><h2 style="font-size:18px">Price Approval</h2>
  <p class="muted">This program is reserved in the portal with the same region-wise access. The request form, approval levels and price list fields will be added once the Price Approval format is shared.</p>
@@ -1007,7 +1167,7 @@ async function accessView(v){
  v.innerHTML='<div class="muted">Loading…</div>';
  let users=[];try{users=await api('GET','/api/users');}catch(e){v.innerHTML=`<div class="card empty">${esc(e.message)}</div>`;return;}
  const missing=regs.filter(r=>!users.some(a=>a.role==='region'&&a.region===r));
- const roleLbl={super:'<span class="chip" style="background:var(--navy);color:#fff">Super-admin – final approval</span>',admin:'<span class="chip teal">Admin – approves</span>',region:'Region user'};
+ const roleLbl={super:'<span class="chip" style="background:var(--navy);color:#fff">Super-admin – final approval</span>',admin:'<span class="chip teal">Admin – approves</span>',region:'Region user',stericon:'<span class="chip" style="background:#e8f6f3;color:#117a65">Stericon – sales, own notes & tasks</span>'};
  v.innerHTML=`
  <div class="banner">Each region signs in with its own <b>Login ID and password</b> and sees and fills only its own region's data. <b>Admin</b> IDs see all regions and approve requests. Only the <b>super-admin</b> manages Login IDs and records the CEO's final approval.</div>
  <div class="card" style="margin-bottom:16px"><div class="row"><h2 style="margin:0;flex:1">Login IDs (${users.length})</h2>
@@ -1020,17 +1180,18 @@ async function accessView(v){
  <div class="card"><h2>Approval matrix</h2>
   <table style="max-width:760px"><tr><td style="padding:6px 0;width:200px"><b>Approval Note</b></td><td>Raised by Region user → Approved / Returned / Rejected by Admin → printed → CEO signs on paper → Final approval recorded by Super-admin</td></tr>
   <tr><td style="padding:6px 0"><b>Price Approval</b></td><td class="muted">Same matrix — will be enabled once the format is shared</td></tr>
-  <tr><td style="padding:6px 0"><b>Task Sheet</b></td><td>Filled and updated by each Region user; Admin sees all regions</td></tr></table></div>`;
+  <tr><td style="padding:6px 0"><b>Task Sheet</b></td><td>Filled and updated by each Region user; Admin sees all regions</td></tr>
+  <tr><td style="padding:6px 0"><b>Field Work</b></td><td>Each user logs own meetings for their region's countries; edit by the person who entered it or Admin; Admin sees all regions. Meetings entered by an Admin are admin-only (region users cannot see them)</td></tr></table></div>`;
  const g=$('#genAll');if(g)g.onclick=async()=>{g.disabled=true;try{const out=await api('POST','/api/users/generate');showCreds(out,'New region login IDs');}catch(e){toast(e.message,true);g.disabled=false;}};
  $('#addAcc').onclick=()=>{
   const {el,close}=modal(`<h3>Add login ID</h3><div class="fg">
    <label class="f w2">Login ID<input id="aid" placeholder="e.g. IB-UPPERLATAM-2" style="text-transform:uppercase"></label>
    <label class="f w2">Name / user<input id="anm" placeholder="e.g. Lekhpal – Upper LATAM"></label>
-   <label class="f w2">Role<select id="arl"><option value="region">Region user (raises & fills data)</option><option value="admin">Admin (all regions, approves)</option></select></label>
+   <label class="f w2">Role<select id="arl"><option value="region">Region user (raises & fills data)</option><option value="admin">Admin (all regions, approves)</option><option value="stericon">Stericon (global Stericon sales + own Approval Notes & Task Sheet)</option></select></label>
    <label class="f w2">Region<select id="arg">${regs.map(r=>`<option>${esc(r)}</option>`).join('')}</select></label>
    <label class="f w4">Password <span class="muted" style="font-weight:400">— leave blank to generate one (min 8 characters)</span><input id="apw" type="text"></label></div>
    <div class="row" style="margin-top:16px"><span class="sp"></span><button class="btn" id="cx">Cancel</button><button class="btn p" id="sv">Create</button></div>`);
-  const rl=el.querySelector('#arl'),rg=el.querySelector('#arg');rl.onchange=()=>rg.disabled=rl.value==='admin';
+  const rl=el.querySelector('#arl'),rg=el.querySelector('#arg');rl.onchange=()=>rg.disabled=rl.value!=='region';
   el.querySelector('#cx').onclick=close;
   el.querySelector('#sv').onclick=async()=>{
    try{const out=await api('POST','/api/users',{loginId:el.querySelector('#aid').value,name:el.querySelector('#anm').value,role:rl.value,region:rg.value,password:el.querySelector('#apw').value});

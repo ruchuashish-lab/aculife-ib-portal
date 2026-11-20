@@ -68,6 +68,9 @@ async function migrate() {
     id SERIAL PRIMARY KEY, partner_id INTEGER NOT NULL, region TEXT NOT NULL, sort INTEGER NOT NULL DEFAULT 0,
     data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await q(`CREATE TABLE IF NOT EXISTS sales_sets(src TEXT PRIMARY KEY, meta JSONB NOT NULL, data BYTEA NOT NULL, uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await q(`CREATE TABLE IF NOT EXISTS fieldwork(
+    id SERIAL PRIMARY KEY, region TEXT NOT NULL, data JSONB NOT NULL, created_by TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await q(`CREATE TABLE IF NOT EXISTS note_files(
     id SERIAL PRIMARY KEY, note_id INTEGER NOT NULL, filename TEXT NOT NULL, mime TEXT NOT NULL, size INTEGER NOT NULL,
     data BYTEA NOT NULL, uploaded_by TEXT, uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
@@ -194,12 +197,27 @@ async function auth(req, res, next) {
   const u = r.rows[0];
   if (!u || !u.active) return res.status(401).json({ error: 'Please sign in' });
   req.user = u;
+  // "Stericon only" login: global Stericon sales data and nothing else.
+  if (u.role === 'stericon') {
+    const p = req.baseUrl + req.path;
+    if (req.method === 'GET' && p === '/api/fieldwork') return res.json([]);
+    const ok = ['/api/me', '/api/me/password', '/api/logout', '/api/settings', '/api/sales/meta', '/api/sales/view', '/api/sales/export.xlsx'].includes(p)
+      || /^\/api\/(notes|priority|tasks)(\/|$)/.test(p);
+    if (!ok || (p === '/api/settings' && req.method !== 'GET')) return res.status(403).json({ error: 'This login can only use Stericon sales data, Approval Notes and Task Sheet' });
+  }
   next();
 }
 const hash = t => crypto.createHash('sha256').update(t).digest('hex');
 const isAdmin = u => u.role === 'admin' || u.role === 'super';
 const isSuper = u => u.role === 'super';
-async function regionsFor(u) { return isAdmin(u) ? (await getSettings()).regions : [u.region]; }
+async function regionsFor(u) { return isAdmin(u) || u.role === 'stericon' ? (await getSettings()).regions : [u.region]; }
+// Record visibility for Approval Notes and Task Sheet:
+// a Stericon login sees only what it created; region users never see Stericon logins' records; admins see all.
+async function recordGate(u) {
+  const regs = await regionsFor(u);
+  const steri = isAdmin(u) || u.role === 'stericon' ? new Set() : new Set((await q("SELECT login_id FROM users WHERE role='stericon'")).rows.map(r => r.login_id));
+  return (region, createdBy) => regs.includes(region) && (u.role === 'stericon' ? createdBy === u.login_id : isAdmin(u) || !steri.has(createdBy || ''));
+}
 const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
 const str = (v, max = 2000) => String(v == null ? '' : v).slice(0, max).trim();
@@ -282,18 +300,18 @@ async function nextNoteNo() {
 }
 
 app.get('/api/notes', auth, wrap(async (req, res) => {
-  const regs = await regionsFor(req.user);
+  const see = await recordGate(req.user);
   const r = await q('SELECT * FROM notes ORDER BY created_at DESC');
   const fs = (await q('SELECT id,note_id,filename,mime,size,uploaded_by,uploaded_at FROM note_files ORDER BY id')).rows;
   const by = {};
   for (const f of fs) (by[f.note_id] = by[f.note_id] || []).push({ id: String(f.id), filename: f.filename, mime: f.mime, size: f.size, by: f.uploaded_by, at: f.uploaded_at });
-  res.json(r.rows.filter(x => regs.includes(x.region)).map(x => noteOut(x, by[x.id])));
+  res.json(r.rows.filter(x => see(x.region, x.created_by)).map(x => noteOut(x, by[x.id])));
 }));
 
 async function loadNote(req, res) {
   const r = await q('SELECT * FROM notes WHERE id=$1', [parseInt(req.params.id, 10) || 0]);
   const n = r.rows[0];
-  if (!n || !(await regionsFor(req.user)).includes(n.region)) { bad(res, 'Note not found', 404); return null; }
+  if (!n || !(await recordGate(req.user))(n.region, n.created_by)) { bad(res, 'Note not found', 404); return null; }
   return n;
 }
 function cleanNote(body) {
@@ -381,7 +399,7 @@ app.post('/api/notes/:id/action', auth, wrap(async (req, res) => {
 const FILE_TYPES = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
 app.post('/api/notes/:id/files', auth, express.raw({ type: Object.keys(FILE_TYPES), limit: '15mb' }), wrap(async (req, res) => {
   const n = await loadNote(req, res); if (!n) return;
-  if (!isAdmin(req.user)) return bad(res, 'Only an admin can upload the signed copy', 403);
+  // Any user who can see the note (its region, or an admin) may upload the signed scan.
   if (!['Approved', 'Final'].includes(n.status)) return bad(res, 'Upload the signed copy after the note is approved');
   const mime = (req.get('Content-Type') || '').split(';')[0].trim();
   if (!FILE_TYPES[mime] || !Buffer.isBuffer(req.body) || !req.body.length) return bad(res, 'Upload a PDF, JPG or PNG file');
@@ -424,8 +442,8 @@ const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
 const taskOut = r => ({ ...parse(r.data), id: String(r.id), partnerId: String(r.partner_id), sort: r.sort });
 
 async function partnersFor(user, regionFilter) {
-  const regs = await regionsFor(user);
-  const ps = (await q('SELECT * FROM priority ORDER BY sort, id')).rows.filter(x => regs.includes(x.region) && (!regionFilter || x.region === regionFilter));
+  const see = await recordGate(user);
+  const ps = (await q('SELECT * FROM priority ORDER BY sort, id')).rows.filter(x => see(x.region, parse(x.data).createdBy) && (!regionFilter || x.region === regionFilter));
   const ts = (await q('SELECT * FROM prio_tasks ORDER BY sort, id')).rows;
   const by = {};
   for (const t of ts) (by[t.partner_id] = by[t.partner_id] || []).push(taskOut(t));
@@ -464,7 +482,7 @@ app.post('/api/priority', auth, wrap(async (req, res) => {
 async function loadPartner(req, res, id) {
   const r = await q('SELECT * FROM priority WHERE id=$1', [parseInt(id, 10) || 0]);
   const p = r.rows[0];
-  if (!p || !(await regionsFor(req.user)).includes(p.region)) { bad(res, 'Distributor / RA not found', 404); return null; }
+  if (!p || !(await recordGate(req.user))(p.region, parse(p.data).createdBy)) { bad(res, 'Distributor / RA not found', 404); return null; }
   return p;
 }
 app.put('/api/priority/:id', auth, wrap(async (req, res) => {
@@ -492,7 +510,8 @@ app.post('/api/priority/:id/tasks', auth, wrap(async (req, res) => {
 async function loadTask(req, res, id) {
   const r = await q('SELECT * FROM prio_tasks WHERE id=$1', [parseInt(id, 10) || 0]);
   const t = r.rows[0];
-  if (!t || !(await regionsFor(req.user)).includes(t.region)) { bad(res, 'Task not found', 404); return null; }
+  const tp = t && (await q('SELECT data FROM priority WHERE id=$1', [t.partner_id])).rows[0];
+  if (!t || !tp || !(await recordGate(req.user))(t.region, parse(tp.data).createdBy)) { bad(res, 'Task not found', 404); return null; }
   return t;
 }
 // Apply an edit / daily update to a task. Old TCD is kept in tcdHistory.
@@ -528,11 +547,13 @@ app.delete('/api/tasks/:id', auth, wrap(async (req, res) => {
 // Daily update: many tasks in one save.
 app.post('/api/tasks/daily', auth, wrap(async (req, res) => {
   const items = (Array.isArray(req.body.items) ? req.body.items : []).slice(0, 500);
+  const gate = await recordGate(req.user);
   let n = 0;
   for (const it of items) {
     const r = await q('SELECT * FROM prio_tasks WHERE id=$1', [parseInt(it.id, 10) || 0]);
     const t = r.rows[0];
-    if (!t || !(await regionsFor(req.user)).includes(t.region)) continue;
+    const tp = t && (await q('SELECT data FROM priority WHERE id=$1', [t.partner_id])).rows[0];
+    if (!t || !tp || !gate(t.region, parse(tp.data).createdBy)) continue;
     const b = { update: it.update, tcd: it.tcd, tcdReason: it.tcdReason, status: it.status };
     if (!str(b.update) && !(isDate(b.tcd) && b.tcd !== parse(t.data).tcd) && !(b.status && b.status !== parse(t.data).status)) continue;
     await q('UPDATE prio_tasks SET data=$1,updated_at=NOW() WHERE id=$2', [JSON.stringify(applyTask(parse(t.data), b, req.user)), t.id]);
@@ -610,6 +631,78 @@ app.get('/api/priority/export.xlsx', auth, wrap(async (req, res) => {
 }));
 
 /* ------------------------------------------------------------------ */
+/* Field Work – field visit / meeting log                               */
+/* ------------------------------------------------------------------ */
+const FW_FILE = findFile('fieldwork-engine.js');
+let FieldWork = null; try { FieldWork = FW_FILE ? require(FW_FILE) : null; } catch (e) { console.error('fieldwork-engine.js could not be loaded', e.message); }
+if (!FieldWork) console.error('fieldwork-engine.js not found – upload public/fieldwork-engine.js to GitHub. Field Work Excel will be unavailable.');
+const FW_TYPES = ['Partner', 'Distributor', 'RA', 'MOH', 'Hospital', 'Pharmacy', 'Other'];
+const fwOut = r => ({ ...parse(r.data), id: String(r.id), region: r.region, createdBy: r.created_by, createdAt: r.created_at, updatedAt: r.updated_at });
+async function fieldworkFor(u, region) {
+  const regs = await regionsFor(u);
+  const want = region && region !== 'ALL' ? [region].filter(r => regs.includes(r)) : regs;
+  if (!want.length) return [];
+  // Entries made by an admin are admin-only: region users never see them.
+  const sql = isAdmin(u) ? 'SELECT * FROM fieldwork WHERE region = ANY($1) ORDER BY id DESC'
+    : "SELECT * FROM fieldwork WHERE region = ANY($1) AND COALESCE(data->>'adminOnly','false') <> 'true' AND COALESCE(created_by,'') NOT IN (SELECT login_id FROM users WHERE role IN ('admin','super')) ORDER BY id DESC";
+  return (await q(sql, [want])).rows.map(fwOut);
+}
+async function fwBody(req, res) {
+  const b = req.body || {}; const o = {};
+  o.country = str(b.country, 80); o.date = isDate(b.date) ? b.date : '';
+  o.meetingNo = Math.max(1, Math.min(99, parseInt(b.meetingNo, 10) || 1));
+  o.time = /^\d{1,2}:\d{2}$/.test(str(b.time, 5)) ? str(b.time, 5) : '';
+  o.type = FW_TYPES.includes(b.type) ? b.type : '';
+  o.partner = str(b.partner, 200); o.attendees = str(b.attendees, 1000); o.objective = str(b.objective, 2000);
+  o.discussion = str(b.discussion, 10000); o.actions = str(b.actions, 5000); o.tcd = isDate(b.tcd) ? b.tcd : '';
+  const region = (await getSettings()).countries[o.country];
+  if (!region || !o.date) { bad(res, 'Country and date are required'); return null; }
+  if (!o.partner && !o.type) { bad(res, 'Enter who you met (partner / distributor / RA / MOH / hospital / pharmacy)'); return null; }
+  if (!(await regionsFor(req.user)).includes(region)) { bad(res, 'You cannot add field work for that country', 403); return null; }
+  return { region, o };
+}
+async function loadFw(req, res) {
+  const r = (await q('SELECT * FROM fieldwork WHERE id=$1', [parseInt(req.params.id, 10) || 0])).rows[0];
+  if (!r || !(await regionsFor(req.user)).includes(r.region) || (!isAdmin(req.user) && parse(r.data).adminOnly)) { bad(res, 'Entry not found', 404); return null; }
+  if (!isAdmin(req.user) && r.created_by !== req.user.login_id) { bad(res, 'Only the person who entered it (or an admin) can change this entry', 403); return null; }
+  return r;
+}
+app.get('/api/fieldwork', auth, wrap(async (req, res) => res.json(await fieldworkFor(req.user))));
+app.post('/api/fieldwork', auth, wrap(async (req, res) => {
+  const x = await fwBody(req, res); if (!x) return;
+  const data = { ...x.o, adminOnly: isAdmin(req.user) };
+  const r = await q('INSERT INTO fieldwork(region,data,created_by) VALUES($1,$2,$3) RETURNING id', [x.region, JSON.stringify(data), req.user.login_id]);
+  res.json({ ok: true, id: String(r.rows[0].id) });
+}));
+app.put('/api/fieldwork/:id', auth, wrap(async (req, res) => {
+  const old = await loadFw(req, res); if (!old) return;
+  const x = await fwBody(req, res); if (!x) return;
+  const data = { ...x.o, adminOnly: !!parse(old.data).adminOnly, updatedBy: req.user.login_id };
+  await q('UPDATE fieldwork SET region=$1,data=$2,updated_at=NOW() WHERE id=$3', [x.region, JSON.stringify(data), old.id]);
+  res.json({ ok: true });
+}));
+app.delete('/api/fieldwork/:id', auth, wrap(async (req, res) => {
+  const old = await loadFw(req, res); if (!old) return;
+  await q('DELETE FROM fieldwork WHERE id=$1', [old.id]);
+  res.json({ ok: true });
+}));
+app.get('/api/fieldwork/export.xlsx', auth, wrap(async (req, res) => {
+  if (!FieldWork) return bad(res, 'Field Work Excel is not available – fieldwork-engine.js is missing on the server', 500);
+  const ExcelJS = require('exceljs');
+  const want = str(req.query.region, 80); const regs = await regionsFor(req.user);
+  if (want && want !== 'ALL' && !regs.includes(want)) return bad(res, 'Not allowed', 403);
+  let f = {}; try { f = JSON.parse(String(req.query.f || '{}')) || {}; } catch (e) { f = {}; }
+  const rows = FieldWork.filter(await fieldworkFor(req.user, want), f);
+  const admin = regs.length > 1;
+  const label = want && want !== 'ALL' ? want : admin ? 'All regions' : regs[0];
+  const wb = await FieldWork.toXlsx(ExcelJS, rows, { admin, label, filters: f });
+  const name = `Aculife-IB_Field_Work_${label.replace(/\s+/g, '_')}_${istDate()}.xlsx`;
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+  await wb.xlsx.write(res); res.end();
+}));
+
+/* ------------------------------------------------------------------ */
 /* Sales Data (International + Stericon micro-analysis files)          */
 /* ------------------------------------------------------------------ */
 function findFile(name) {
@@ -653,7 +746,15 @@ async function parseSalesUpload(buffer) {
   return p.finish();
 }
 async function salesScope(req) {
-  return { admin: isAdmin(req.user), regions: await regionsFor(req.user), region: str(req.query.region, 80) || 'ALL' };
+  return { admin: isAdmin(req.user) || req.user.role === 'stericon', regions: await regionsFor(req.user), region: str(req.query.region, 80) || 'ALL' };
+}
+// Stericon-only view of the sales data (rows of business "S"), cached per uploaded dataset.
+let STERI = { src: null, data: null };
+function salesDataFor(u) {
+  if (u.role !== 'stericon') return SALES;
+  if (!SALES.CMB) return {};
+  if (STERI.src !== SALES.CMB) STERI = { src: SALES.CMB, data: { CMB: { ...SALES.CMB, rows: SALES.CMB.rows.filter(r => r[3] === 'S') } } };
+  return STERI.data;
 }
 const salesOpt = req => {
   let filters = {};
@@ -662,21 +763,22 @@ const salesOpt = req => {
 };
 app.get('/api/sales/meta', auth, wrap(async (req, res) => {
   if (!SalesEngine) return bad(res, 'Sales module files are missing on the server', 500);
-  res.json({ CMB: SALES.CMB ? SALES.CMB.meta : null, views: SalesEngine.VIEWS, canUpload: isAdmin(req.user) });
+  res.json({ CMB: SALES.CMB ? SALES.CMB.meta : null, views: SalesEngine.VIEWS, canUpload: isSuper(req.user) });
 }));
 app.get('/api/sales/view', auth, wrap(async (req, res) => {
   if (!SalesEngine) return bad(res, 'Sales module files are missing on the server', 500);
   const scope = await salesScope(req);
   if (scope.region !== 'ALL' && !scope.regions.includes(scope.region)) return bad(res, 'Not allowed', 403);
-  res.json(SalesEngine.compute(SALES, await getSettings(), scope, str(req.query.view, 30) || 'dashboard', salesOpt(req)));
+  res.json(SalesEngine.compute(salesDataFor(req.user), await getSettings(), scope, str(req.query.view, 30) || 'dashboard', salesOpt(req)));
 }));
 app.get('/api/sales/export.xlsx', auth, wrap(async (req, res) => {
   if (!SalesEngine) return bad(res, 'Sales module files are missing on the server', 500);
   const scope = await salesScope(req);
   if (scope.region !== 'ALL' && !scope.regions.includes(scope.region)) return bad(res, 'Not allowed', 403);
   const ExcelJS = require('exceljs'); const opt = salesOpt(req);
-  const label = (scope.region !== 'ALL' ? scope.region : scope.admin ? 'All regions' : scope.regions.join(', ')) + (opt.biz === 'I' ? ' – International' : opt.biz === 'S' ? ' – Stericon' : '');
-  const wb = await SalesEngine.toXlsx(ExcelJS, SALES, await getSettings(), scope, label, opt);
+  const steri = req.user.role === 'stericon';
+  const label = (steri ? 'Stericon – ' : '') + (scope.region !== 'ALL' ? scope.region : scope.admin ? 'All regions' : scope.regions.join(', ')) + (!steri && opt.biz === 'I' ? ' – International' : !steri && opt.biz === 'S' ? ' – Stericon' : '');
+  const wb = await SalesEngine.toXlsx(ExcelJS, salesDataFor(req.user), await getSettings(), scope, label, opt);
   const name = `Aculife-IB_Sales_${label.replace(/[^A-Za-z0-9]+/g, '_')}_${opt.cur}_${istDate()}.xlsx`;
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
@@ -684,10 +786,10 @@ app.get('/api/sales/export.xlsx', auth, wrap(async (req, res) => {
 }));
 app.post('/api/sales/upload', auth, express.raw({ type: () => true, limit: '80mb' }), wrap(async (req, res) => {
   if (!SalesEngine) return bad(res, 'Sales module files are missing on the server', 500);
-  if (!isAdmin(req.user)) return bad(res, 'Only an admin can upload sales data', 403);
+  if (!isSuper(req.user)) return bad(res, 'Only the super-admin (ADMIN) can upload sales data', 403);
   if (!Buffer.isBuffer(req.body) || req.body.length < 100 || req.body[0] !== 0x50 || req.body[1] !== 0x4b) return bad(res, 'Please upload the Excel (.xlsx) file');
   let ds;
-  SALES.CMB = null; if (global.gc) global.gc(); // free the old month's data while the new file is read
+  SALES.CMB = null; STERI = { src: null, data: null }; if (global.gc) global.gc(); // free the old month's data while the new file is read
   try { ds = await parseSalesUpload(req.body); }
   catch (e) { await loadSales(); return bad(res, e.message || 'Could not read this Excel file'); }
   let fname = 'upload.xlsx'; try { fname = decodeURIComponent(req.get('X-Filename') || fname); } catch (e) {}
@@ -722,7 +824,7 @@ async function parsePrtUpload(buffer) {
 const prtOpt = req => ({ ...salesOpt(req), q: str(req.query.q, 100) });
 app.get('/api/prt/meta', auth, wrap(async (req, res) => {
   if (!PrtEngine) return bad(res, 'PRT module files are missing on the server', 500);
-  res.json({ PRT: SALES.PRT ? SALES.PRT.meta : null, views: PrtEngine.VIEWS, canUpload: isAdmin(req.user) });
+  res.json({ PRT: SALES.PRT ? SALES.PRT.meta : null, views: PrtEngine.VIEWS, canUpload: isSuper(req.user) });
 }));
 app.get('/api/prt/view', auth, wrap(async (req, res) => {
   if (!PrtEngine) return bad(res, 'PRT module files are missing on the server', 500);
@@ -743,7 +845,7 @@ app.get('/api/prt/export.xlsx', auth, wrap(async (req, res) => {
 }));
 app.post('/api/prt/upload', auth, express.raw({ type: () => true, limit: '80mb' }), wrap(async (req, res) => {
   if (!PrtEngine) return bad(res, 'PRT module files are missing on the server', 500);
-  if (!isAdmin(req.user)) return bad(res, 'Only an admin can upload PRT data', 403);
+  if (!isSuper(req.user)) return bad(res, 'Only the super-admin (ADMIN) can upload PRT data', 403);
   if (!Buffer.isBuffer(req.body) || req.body.length < 100 || req.body[0] !== 0x50 || req.body[1] !== 0x4b) return bad(res, 'Please upload the Excel (.xlsx) file');
   let ds;
   SALES.PRT = null; if (global.gc) global.gc();
@@ -773,7 +875,7 @@ app.post('/api/users', auth, superOnly, wrap(async (req, res) => {
   const b = req.body || {};
   const login = str(b.loginId, 40).toUpperCase().replace(/\s+/g, '-');
   if (!/^[A-Z0-9._-]{3,40}$/.test(login)) return bad(res, 'Login ID: 3–40 letters, numbers, - _ .');
-  const role = ['admin', 'region'].includes(b.role) ? b.role : 'region';
+  const role = ['admin', 'region', 'stericon'].includes(b.role) ? b.role : 'region';
   const regs = (await getSettings()).regions;
   const region = role === 'region' ? str(b.region, 80) : '';
   if (role === 'region' && !regs.includes(region)) return bad(res, 'Choose a region');
@@ -837,11 +939,11 @@ app.get('/healthz', (req, res) => res.send('ok'));
 app.get('/vendor/jspdf.js', (req, res) => res.sendFile(path.join(__dirname, 'node_modules/jspdf/dist/jspdf.umd.min.js')));
 app.get('/vendor/jspdf-autotable.js', (req, res) => res.sendFile(path.join(__dirname, 'node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.min.js')));
 // Phone / desktop app install files (manifest, service worker, icons) – found wherever they were uploaded.
-const APP_FILES = { '/manifest.webmanifest': 'application/manifest+json', '/sw.js': 'text/javascript', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png', '/icon-maskable-512.png': 'image/png', '/apple-touch-icon.png': 'image/png' };
+const APP_FILES = { '/fieldwork-engine.js': 'text/javascript', '/manifest.webmanifest': 'application/manifest+json', '/sw.js': 'text/javascript', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png', '/icon-maskable-512.png': 'image/png', '/apple-touch-icon.png': 'image/png' };
 for (const [route, type] of Object.entries(APP_FILES)) {
   const file = findFile(route.slice(1));
   if (!file) { console.error(route.slice(1) + ' not found – upload it inside the public folder to enable "Install app".'); continue; }
-  app.get(route, (req, res) => { res.type(type); res.setHeader('Cache-Control', route === '/sw.js' || route === '/manifest.webmanifest' ? 'no-cache' : 'public, max-age=604800'); if (route === '/sw.js') res.setHeader('Service-Worker-Allowed', '/'); res.sendFile(file); });
+  app.get(route, (req, res) => { res.type(type); res.setHeader('Cache-Control', route === '/sw.js' || route === '/manifest.webmanifest' || route.endsWith('.js') ? 'no-cache' : 'public, max-age=604800'); if (route === '/sw.js') res.setHeader('Service-Worker-Allowed', '/'); res.sendFile(file); });
 }
 app.get('/favicon.ico', (req, res) => { const f = findFile('icon-192.png'); if (!f) return res.status(404).end(); res.type('image/png'); res.sendFile(f); });
 // The web page: public/index.html, or wherever index.html was uploaded.
